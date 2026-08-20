@@ -1,0 +1,2962 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Cronogramas ICX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B2A4A; --navy-light:#2E4270; --orange:#F3901E; --orange-light:#FDEBD3;
+    --charcoal:#383939; --gray:#8A8F98; --gray-light:#F2F3F5; --border:#E1E3E8;
+    --red:#D6455A; --green:#3E9B6F; --white:#FFFFFF; --phase:#12203B;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:'Poppins',-apple-system,'Segoe UI',sans-serif; background:var(--gray-light); color:var(--charcoal); font-size:14px;}
+  .app{max-width:1500px;margin:0 auto;padding:20px;}
+  header.top{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+  header.top h1{font-size:20px; font-weight:700; color:var(--navy); margin:0; display:flex; align-items:center; gap:10px;}
+  header.top h1 .dot{width:10px;height:10px;border-radius:50%;background:var(--orange);display:inline-block;}
+  .tabs{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; align-items:center;}
+  .tab{padding:8px 16px; background:var(--gray-light); border:1px solid var(--border); border-radius:8px 8px 0 0; cursor:pointer; font-weight:500; color:var(--gray); font-size:13px; border-bottom:1px solid var(--border);}
+  .tab.active{color:var(--navy); background:var(--white); border-bottom:1px solid var(--white); box-shadow:0 -2px 0 var(--orange) inset;}
+  .tab-add{padding:8px 12px; background:none; border:1px dashed var(--gray); border-radius:8px; color:var(--gray); cursor:pointer; font-size:13px;}
+  .tab-del{margin-left:8px; color:var(--gray); font-weight:700;}
+  .tab-del:hover{color:var(--red);}
+  .card{background:var(--white); border:1px solid var(--border); border-radius:10px; padding:18px; margin-bottom:16px;}
+  .toolbar{display:flex; gap:18px; align-items:flex-end; flex-wrap:wrap; margin-bottom:4px;}
+  .field label{display:block; font-size:11px; color:var(--gray); margin-bottom:4px; text-transform:uppercase; letter-spacing:.04em;}
+  .field input[type=date], .field input[type=text]{border:1px solid var(--border); border-radius:6px; padding:7px 10px; font-family:inherit; font-size:13px;}
+  .btn{border:none; border-radius:6px; padding:8px 14px; font-family:inherit; font-weight:600; font-size:13px; cursor:pointer; transition:.15s;}
+  .btn-primary{background:var(--navy); color:#fff;} .btn-primary:hover{background:var(--navy-light);}
+  .btn-accent{background:var(--orange); color:#fff;} .btn-accent:hover{opacity:.9;}
+  .btn-ghost{background:var(--gray-light); color:var(--charcoal);} .btn-ghost:hover{background:var(--border);}
+  .btn-xs{padding:3px 7px; font-size:11px; border-radius:5px;}
+  table{width:100%; border-collapse:collapse;}
+  th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--gray); padding:7px 6px; border-bottom:2px solid var(--border); white-space:nowrap;}
+  td{padding:5px 6px; border-bottom:1px solid var(--border); vertical-align:middle;}
+  td input, td select{width:100%; border:1px solid transparent; background:transparent; border-radius:5px; padding:5px 6px; font-family:inherit; font-size:12.5px; color:var(--charcoal);}
+  td input:hover, td select:hover{border-color:var(--border);}
+  td input:focus, td select:focus{border-color:var(--orange); outline:none; background:#fff;}
+  .col-narrow{width:64px;} .col-med{width:100px;} .col-pred{width:130px;}
+  .badge{display:inline-block; padding:2px 8px; border-radius:20px; font-size:10.5px; font-weight:600; white-space:nowrap;}
+  .badge-critical{background:var(--orange-light); color:var(--orange);}
+  .badge-ok{background:#E6F4EC; color:var(--green);}
+  .badge-phase{background:#E4E8F0; color:var(--phase);}
+  .row-del{cursor:pointer; color:var(--gray); font-weight:700; font-size:14px;}
+  .row-del:hover{color:var(--red);}
+  .row-phase td{background:#F7F8FA; font-weight:600;}
+  .task-name-cell{display:flex; align-items:center; gap:3px;}
+  .task-name-cell input[type="text"]{flex:1 1 220px; min-width:180px; width:auto;}
+  .indent-btn{width:15px; height:15px; font-size:9px;}
+  .indent-controls{display:flex; gap:2px; flex-shrink:0;}
+  .indent-btn{border:1px solid var(--border); background:#fff; border-radius:4px; width:18px; height:18px; font-size:10px; line-height:1; cursor:pointer; color:var(--gray); display:flex; align-items:center; justify-content:center;}
+  .indent-btn:hover{border-color:var(--orange); color:var(--orange);}
+  .wbs-tag{font-size:10.5px; color:var(--gray); width:34px; flex-shrink:0;}
+  .milestone-chk{flex-shrink:0;}
+  .add-row{margin-top:10px; display:flex; gap:8px;}
+  .section-title{font-size:14px; font-weight:700; color:var(--navy); margin:0 0 12px 0; display:flex; align-items:center; gap:8px;}
+  .section-title .n{background:var(--orange); color:#fff; border-radius:50%; width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; font-size:11px;}
+  .hint{font-size:11.5px; color:var(--gray); margin:-6px 0 12px 0;}
+  .gantt-wrap{overflow-x:auto;}
+  .legend{display:flex; gap:16px; font-size:12px; color:var(--gray); margin-bottom:10px; flex-wrap:wrap;}
+  .legend span{display:flex; align-items:center; gap:6px;}
+  .swatch{width:14px;height:14px;border-radius:3px;display:inline-block;}
+  .alerts{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;}
+  @media (max-width:900px){ .alerts{grid-template-columns:1fr;} }
+  .alert-col h3{font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--gray); margin:0 0 8px 0;}
+  .alert-item{border-radius:7px; padding:9px 10px; margin-bottom:6px; font-size:12.5px; line-height:1.4;}
+  .alert-crit{background:var(--orange-light); color:#9C5A0E; border-left:3px solid var(--orange);}
+  .alert-risk{background:#FCEAEC; color:#9C2E3F; border-left:3px solid var(--red);}
+  .alert-res{background:#EAF0FB; color:#2A417A; border-left:3px solid var(--navy);}
+  .alert-empty{color:var(--gray); font-style:italic; font-size:12.5px;}
+  .empty-state{text-align:center; padding:40px 20px; color:var(--gray);}
+  .empty-state .big{font-size:28px; margin-bottom:6px;}
+  .save-indicator{font-size:11px; color:var(--gray); margin-left:10px;}
+  .cost-summary{display:flex; gap:24px; flex-wrap:wrap; margin-bottom:14px;}
+  .cost-box{background:var(--gray-light); border-radius:8px; padding:12px 18px; min-width:150px;}
+  .cost-box .k{font-size:10.5px; text-transform:uppercase; color:var(--gray); letter-spacing:.04em;}
+  .cost-box .v{font-size:19px; font-weight:700; color:var(--navy); margin-top:2px;}
+  .modal-overlay{position:fixed; inset:0; background:rgba(27,42,74,0.55); display:none; align-items:center; justify-content:center; z-index:1000;}
+  .modal-overlay.open{display:flex;}
+  .modal-box{background:#fff; border-radius:12px; padding:26px 28px; width:420px; max-width:92vw; box-shadow:0 20px 50px rgba(0,0,0,.25);}
+  .modal-box h2{margin:0 0 4px 0; font-size:17px; color:var(--navy);}
+  .modal-box p.hint2{margin:0 0 18px 0; font-size:12.5px; color:var(--gray);}
+  .modal-field{margin-bottom:12px;}
+  .modal-field label{display:block; font-size:11px; color:var(--gray); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;}
+  .modal-field input{width:100%; border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-family:inherit; font-size:13px;}
+  .modal-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:18px;}
+  .export-progress{font-size:12.5px; color:var(--gray); margin-top:10px; display:none;}
+  .export-progress.show{display:block;}
+  #printRoot{position:fixed; left:-99999px; top:0; width:1200px; background:#fff;}
+  .pp-page{width:1200px; min-height:848px; padding:56px 60px; position:relative; font-family:'Poppins',sans-serif; color:var(--charcoal);}
+  .pp-cover{background:var(--navy); color:#fff; display:flex; flex-direction:column; justify-content:center;}
+  .pp-cover .tag{color:var(--orange); font-weight:700; letter-spacing:.08em; font-size:12px; text-transform:uppercase; margin-bottom:18px;}
+  .pp-cover h1{font-size:34px; margin:0 0 10px 0; font-weight:700; line-height:1.25;}
+  .pp-cover .sub{font-size:15px; color:#C9D2E6; margin-bottom:40px;}
+  .pp-cover .meta-row{display:flex; gap:60px; margin-top:10px;}
+  .pp-cover .meta-item .k{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#8FA0C9; margin-bottom:4px;}
+  .pp-cover .meta-item .v{font-size:15px; font-weight:600;}
+  .pp-cover .footer-tag{position:absolute; bottom:40px; left:60px; color:var(--orange); font-weight:600; font-size:13px;}
+  .pp-header{display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid var(--orange); padding-bottom:14px; margin-bottom:26px;}
+  .pp-header .brand{font-weight:700; color:var(--navy); font-size:15px;}
+  .pp-header .doc-title{font-size:20px; font-weight:700; color:var(--navy);}
+  .pp-header .page-meta{font-size:11px; color:var(--gray); text-align:right;}
+  .pp-table{width:100%; border-collapse:collapse; margin-top:6px;}
+  .pp-table th{background:var(--orange); color:#fff; text-align:left; padding:9px 12px; font-size:12px; text-transform:uppercase; letter-spacing:.03em;}
+  .pp-table td{padding:9px 12px; font-size:13px; border-bottom:1px solid var(--border);}
+  .pp-table tr:nth-child(even) td{background:#FBE3D2;}
+  .pp-footer-tag{position:absolute; bottom:24px; left:60px; font-size:11px; color:var(--gray);}
+  .pp-footer-tag b{color:var(--orange);}
+  .urgent-banner{background:#FCEAEC; border:1px solid #F3C4CC; color:#9C2E3F; border-radius:10px; padding:12px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:13px;}
+  .urgent-banner button{background:none; border:none; color:#9C2E3F; font-weight:700; cursor:pointer; font-size:16px;}
+  .bell-item{border-radius:7px; padding:8px 10px; margin-bottom:6px; font-size:12.5px; line-height:1.4; cursor:pointer;}
+  .bell-item:hover{opacity:0.85;}
+  .bell-empty{color:var(--gray); font-style:italic; font-size:12.5px; text-align:center; padding:12px 0;}
+  .task-edit-panel{background:#FBFAF7; border-top:2px solid var(--orange); border-bottom:1px solid var(--border); padding:18px 20px;}
+  .task-edit-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px;}
+  body.client-mode .cost-col{display:none !important;}
+  .view-tabs{display:flex; gap:8px; margin-bottom:16px;}
+  .view-tab-btn{
+    border:none; background:var(--white); border:1px solid var(--border); border-radius:8px;
+    padding:10px 18px; font-family:inherit; font-weight:600; font-size:13.5px; color:var(--gray); cursor:pointer;
+  }
+  .view-tab-btn.active{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .budget-month-head{background:var(--gray-light); font-size:10px;}
+  .budget-total-row td{font-weight:700; background:#F7F8FA; border-top:2px solid var(--border);}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1><span class="dot"></span>Cronogramas ICX</h1>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <span class="save-indicator" id="storageModeIndicator"></span>
+      <span class="save-indicator" id="saveIndicator"></span>
+      <div style="position:relative;">
+        <button class="btn btn-ghost btn-xs" id="btnBell" style="font-size:16px; padding:6px 10px; position:relative;">
+          🔔<span id="bellBadge" style="display:none; position:absolute; top:-4px; right:-4px; background:var(--red); color:#fff; border-radius:10px; font-size:10px; padding:1px 5px; font-weight:700;"></span>
+        </button>
+        <div id="bellPanel" style="display:none; position:absolute; right:0; top:36px; width:340px; max-height:420px; overflow-y:auto; background:#fff; border:1px solid var(--border); border-radius:10px; box-shadow:0 12px 30px rgba(0,0,0,.15); padding:14px; z-index:100;"></div>
+      </div>
+    </div>
+  </header>
+
+  <div id="urgentBanner" style="display:none;"></div>
+
+  <div class="tabs" id="tabsBar"></div>
+
+  <div class="view-tabs">
+    <button class="view-tab-btn active" id="viewTabCronograma" data-view="cronograma">📅 Cronograma</button>
+    <button class="view-tab-btn" id="viewTabCostos" data-view="costos">💰 Presupuesto y costos</button>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="field"><label>Proyecto</label><input type="text" id="projectName" style="min-width:220px;"></div>
+      <div class="field"><label>Inicio del proyecto</label><input type="date" id="projectStart"></div>
+      <button class="btn btn-ghost" id="btnDeleteProject" style="color:var(--red);">🗑️ Eliminar este cronograma</button>
+      <button class="btn btn-ghost" id="btnClientMode">🙈 Modo cliente (ocultar costos)</button>
+      <button class="btn btn-accent" id="btnBaseline">Guardar línea base</button>
+      <button class="btn btn-ghost" id="btnClearBaseline">Quitar línea base</button>
+      <button class="btn btn-primary" id="btnExportPdf">📄 Exportar PDF</button>
+      <button class="btn btn-ghost" id="btnExportMspdi">🗂️ Exportar a MS Project (.xml)</button>
+      <button class="btn btn-primary" id="btnExportTasksExcel">📊 Exportar cronograma a Excel</button>
+      <button class="btn btn-ghost" id="btnImportMspdi">📥 Importar desde MS Project (.xml)</button>
+      <button class="btn btn-ghost" id="btnDownloadMppScript">🖥️ Script para convertir a .mpp real</button>
+      <button class="btn btn-ghost" id="btnExportJson">💾 Exportar JSON</button>
+      <button class="btn btn-ghost" id="btnImportJson">📤 Importar JSON</button>
+      <input type="file" id="fileImportMspdi" accept=".xml" style="display:none;">
+      <input type="file" id="fileImportJson" accept=".json" style="display:none;">
+      <span class="save-indicator" id="baselineInfo"></span>
+    </div>
+  </div>
+
+  <div id="viewCronograma">
+  <div class="card">
+    <p class="section-title"><span class="n">1</span>Crear cronograma desde una propuesta (texto)</p>
+    <p class="hint">
+      Pega aquí un esquema de fases y tareas en texto plano, y la herramienta arma el cronograma completo (WBS, fechas, dependencias). Formato: fases sin sangría, tareas con sangría, separadas por <code>|</code>: <code>Nombre | duración en días | responsable | asignación % | predecesoras</code>.
+      ¿No tienes el esquema aún? Usa el botón "Copiar receta para IA" — pégala en Claude (o cualquier asistente) junto con tu propuesta comercial, y te devolverá el texto ya listo para pegar aquí abajo.
+    </p>
+    <div class="toolbar" style="margin-bottom:10px;">
+      <button class="btn btn-ghost" id="btnCopyRecipe">🤖 Copiar receta para IA</button>
+      <button class="btn btn-ghost" id="btnFillExampleOutline">Ver ejemplo</button>
+    </div>
+    <textarea id="outlineInput" rows="8" style="width:100%; font-family:monospace; font-size:12.5px; border:1px solid var(--border); border-radius:8px; padding:10px;" placeholder="Fase 1: Análisis y Diseño
+  Levantamiento de requisitos | 10 | Alex | 100
+  Diseño técnico | 8 | Joan | 50 | 1.1
+  Hito: Diseño aprobado | 0 | | | 1.2
+Fase 2: Migración
+  Migración Ventas | 40 | Jessica | 100 | 1.3"></textarea>
+    <div class="add-row">
+      <div class="field"><label>Nombre del proyecto</label><input type="text" id="outlineProjectName" style="min-width:260px;" placeholder="Ej. Coopenae - Fase 2"></div>
+      <button class="btn btn-accent" id="btnGenerateFromOutline" style="align-self:flex-end;">✨ Generar cronograma</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-title"><span class="n">2</span>Calendario y festivos</p>
+    <div class="toolbar" style="margin-bottom:10px;">
+      <label style="display:flex; align-items:center; gap:6px; font-size:13px;"><input type="checkbox" id="chkColombianHolidays" style="width:auto;"> Incluir festivos colombianos (Ley Emiliani)</label>
+      <div class="field"><label>Horas laborables por día</label><input type="number" id="hoursPerDayInput" min="1" max="24" step="0.5" style="width:80px;"></div>
+      <div class="field"><label>Agregar festivo/no laborable propio</label><input type="date" id="customHolidayInput"></div>
+      <button class="btn btn-ghost btn-xs" id="btnAddCustomHoliday" style="padding:7px 12px;">+ Agregar</button>
+    </div>
+    <p class="hint" style="margin-top:0;">Las horas por día solo afectan la conversión al exportar/importar con MS Project (.xml) — ahí Project guarda todo en horas. El cronograma en sí y los costos por recurso siempre se calculan en días hábiles.</p>
+    <div id="customHolidaysList" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+  </div>
+
+  <div class="card">
+    <p class="section-title"><span class="n">3</span>Avance y desviación del proyecto</p>
+    <div class="cost-summary" id="progressSummary"></div>
+  </div>
+
+  <div class="card">
+    <p class="section-title"><span class="n">4</span>Línea de tiempo resumen</p>
+    <div class="gantt-wrap" id="timelineWrap"></div>
+  </div>
+
+  <div class="card">
+    <p class="section-title"><span class="n">5</span>Tareas (jerarquía WBS)</p>
+    <p class="hint">
+      <b>Predecesoras</b> se escriben como en MS Project usando el <b>número de fila</b> (columna N°): <code>2</code> (fin‑a‑inicio), <code>2FS+3</code> (con 3 días de atraso), <code>2SS-1</code> (inicio‑a‑inicio con 1 día de adelanto), <code>2FF</code> (fin‑a‑fin). Varias separadas por coma, ej. <code>3,5FF</code>. Marca <b>Hito</b> para una tarea de duración cero. Usa las flechas ← → para anidar tareas dentro de una fase (una fila con "hijos" se vuelve fase automáticamente).
+    </p>
+    <div class="toolbar" style="margin-bottom:10px; align-items:flex-end;">
+      <div class="field"><label>Buscar (nombre/responsable)</label><input type="text" id="filterText" placeholder="Ej. migración" style="width:180px;"></div>
+      <div class="field"><label>Responsable</label><select id="filterResource" style="min-width:160px;"><option value="">Todos</option></select></div>
+      <div class="field"><label>Estado</label><select id="filterEstado" style="min-width:140px;">
+        <option value="">Todos</option>
+        <option value="Fase">Fase</option>
+        <option value="Hito">Hito</option>
+        <option value="Crítica">Crítica</option>
+        <option value="En curso">En curso</option>
+        <option value="Completada">Completada</option>
+        <option value="Vencida">Vencida</option>
+      </select></div>
+      <div class="field"><label>% Avance real (min-max)</label><div style="display:flex; gap:4px;"><input type="number" id="filterAvanceMin" min="0" max="100" placeholder="0" style="width:55px;"><input type="number" id="filterAvanceMax" min="0" max="100" placeholder="100" style="width:55px;"></div></div>
+      <div class="field"><label>% Asignación (min-max)</label><div style="display:flex; gap:4px;"><input type="number" id="filterAsignMin" min="0" max="100" placeholder="0" style="width:55px;"><input type="number" id="filterAsignMax" min="0" max="100" placeholder="100" style="width:55px;"></div></div>
+      <button class="btn btn-ghost" id="btnClearFilters">✕ Limpiar filtros</button>
+      <span class="save-indicator" id="filterCount"></span>
+    </div>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:36px;" title="Número de fila, como el ID de Project">N°</th>
+          <th style="min-width:280px;">Tarea</th>
+          <th style="width:60px;">Días</th>
+          <th style="width:90px;">% Avance real</th>
+          <th style="width:90px;">% Avance esperado</th>
+          <th style="width:70px;">Desviación</th>
+          <th style="min-width:150px;">Responsable</th>
+          <th style="width:110px;" title="Ej: 2  |  2FS+3  |  2SS-1  |  2FF">Predecesoras</th>
+          <th class="col-med">Inicio</th>
+          <th class="col-med">Fin</th>
+          <th class="col-med">Estado</th>
+          <th style="width:26px;"></th>
+        </tr>
+      </thead>
+      <tbody id="taskBody"></tbody>
+    </table>
+    </div>
+    <div class="add-row" style="align-items:center; gap:10px;">
+      <button class="btn btn-accent" id="btnAddTask">+ Agregar tarea</button>
+      <span class="save-indicator" id="addTaskHint"></span>
+    </div>
+  </div>
+  </div><!-- /viewCronograma -->
+
+  <div id="viewCostos" style="display:none;">
+  <div class="card cost-col">
+    <p class="section-title"><span class="n">6</span>Presupuesto</p>
+    <div class="cost-summary" id="budgetSummary"></div>
+    <div style="margin-bottom:14px;">
+      <button class="btn btn-ghost btn-xs" id="btnToggleIngresosMes" style="padding:7px 12px;">▶ Ver/editar ingresos mes a mes</button>
+      <div id="ingresosMesPanel" style="display:none; margin-top:10px; background:var(--gray-light); border-radius:8px; padding:12px; max-height:220px; overflow-y:auto;"></div>
+    </div>
+    <div class="toolbar" style="margin:6px 0 10px 0;">
+      <div class="field"><label>Ingreso mensual (para aplicar parejo)</label><input type="text" id="budgetIngresos" placeholder="Ej. 80000000" style="width:160px;"></div>
+      <button class="btn btn-ghost btn-xs" id="btnApplyFlatIngreso" style="padding:8px 12px;">Aplicar a todos los meses</button>
+      <div class="field"><label>Duración (meses)</label><input type="number" id="budgetDuracionMeses" min="1" max="60" style="width:90px;"></div>
+      <div class="field"><label>Mes inicial</label><input type="month" id="budgetStartMonth"></div>
+    </div>
+    <div class="toolbar" style="margin:0 0 14px 0;">
+      <div class="field"><label>Valor total del contrato (para hitos de pago)</label><input type="text" id="budgetContractValue" placeholder="Ej. 400000000" style="width:180px;"></div>
+      <button class="btn btn-accent" id="btnSyncIngresosFromMilestones">🔗 Sincronizar ingresos desde hitos del cronograma</button>
+      <button class="btn btn-accent" id="btnSyncFromSchedule">🔗 Sincronizar horas planeadas desde el cronograma</button>
+      <button class="btn btn-ghost" id="btnSyncRealFromSchedule">🔗 Sincronizar horas reales desde el avance</button>
+      <button class="btn btn-ghost" id="btnImportBudgetExcel">📥 Importar desde Excel</button>
+      <button class="btn btn-primary" id="btnExportBudgetExcel">📊 Exportar a Excel</button>
+      <input type="file" id="fileImportBudgetExcel" accept=".xlsx,.xls" style="display:none;">
+    </div>
+    <p class="hint" style="margin-top:0;">
+      "Sincronizar ingresos" busca tareas cuyo nombre tenga un hito de pago (ej. "Migración Ventas (hito de pago 25%)") y usa la fecha en que terminan según el cronograma para ubicar ese ingreso en el mes correcto — solo necesitas darle el valor total del contrato.
+      "Sincronizar horas planeadas" trae las horas asignadas de cada recurso directamente de las tareas del cronograma. "Sincronizar horas reales" las calcula como horas planeadas × % de avance real de cada tarea.
+      Haz clic en ▶ junto a cada recurso para ver/editar su desglose mes a mes sin saturar la tabla.
+    </p>
+    <div style="overflow-x:auto;">
+    <table id="budgetTable">
+      <thead><tr id="budgetHeaderRow"></tr></thead>
+      <tbody id="budgetBody"></tbody>
+      <tfoot id="budgetFooter"></tfoot>
+    </table>
+    </div>
+    <div class="add-row"><button class="btn btn-ghost" id="btnAddBudgetRole">+ Agregar recurso</button></div>
+  </div>
+
+  <div class="card">
+    <p class="section-title"><span class="n">7</span>Recursos y costos (por tarea)</p>
+    <div class="cost-summary" id="costSummary"></div>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead><tr><th>Recurso</th><th class="col-med cost-col">Tarifa / día</th><th class="col-med">Días asignados</th><th class="col-med cost-col">Costo total</th><th class="col-med">Carga</th><th style="width:26px;"></th></tr></thead>
+      <tbody id="resourceBody"></tbody>
+    </table>
+    </div>
+    <div class="add-row"><button class="btn btn-ghost" id="btnAddResource">+ Agregar recurso</button></div>
+  </div>
+  </div><!-- /viewCostos -->
+
+  <div id="viewCronograma2">
+
+  <div class="card">
+    <p class="section-title"><span class="n">8</span>Diagrama de Gantt</p>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--navy);"></span>Tarea normal</span>
+      <span><span class="swatch" style="background:var(--orange);"></span>Ruta crítica</span>
+      <span><span class="swatch" style="background:var(--phase);"></span>Fase (resumen)</span>
+      <span><span class="swatch" style="background:var(--orange); transform:rotate(45deg); border-radius:2px;"></span>Hito</span>
+      <span><span class="swatch" style="background:var(--gray); opacity:.5;"></span>Línea base</span>
+    </div>
+    <div class="gantt-wrap" id="ganttWrap"></div>
+  </div>
+
+  <div class="card">
+    <p class="section-title"><span class="n">9</span>Alertas y riesgos</p>
+    <div class="toolbar" style="margin-bottom:12px;">
+      <button class="btn btn-ghost" id="btnCopyAlerts">📋 Copiar resumen (para email/Teams)</button>
+      <button class="btn btn-ghost" id="btnEnableNotifications">🔔 Activar recordatorios en este navegador</button>
+    </div>
+    <div class="alerts">
+      <div class="alert-col"><h3>Ruta crítica</h3><div id="alertsCritical"></div></div>
+      <div class="alert-col"><h3>Atrasos / vencidas</h3><div id="alertsRisk"></div></div>
+      <div class="alert-col"><h3>Sobreasignación de recursos</h3><div id="alertsResource"></div></div>
+    </div>
+  </div>
+  </div><!-- /viewCronograma2 -->
+</div><!-- /app -->
+
+<div id="claudeChatBubble" style="position:fixed; bottom:22px; right:22px; z-index:200;">
+  <button id="btnToggleClaudeChat" style="width:56px; height:56px; border-radius:50%; background:var(--navy); color:#fff; border:none; font-size:24px; box-shadow:0 6px 18px rgba(0,0,0,.25); cursor:pointer;">🤖</button>
+</div>
+<div id="claudeChatPanel" style="display:none; position:fixed; bottom:88px; right:22px; width:360px; max-width:88vw; height:480px; max-height:70vh; background:#fff; border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.3); z-index:200; flex-direction:column; overflow:hidden;">
+  <div style="background:var(--navy); color:#fff; padding:14px 16px; display:flex; justify-content:space-between; align-items:center;">
+    <div><b>Pregúntale a Claude</b><div style="font-size:11px; color:#C9D2E6;">sobre este cronograma</div></div>
+    <button id="btnCloseClaudeChat" style="background:none; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
+  </div>
+  <div id="claudeChatMessages" style="flex:1; overflow-y:auto; padding:14px; font-size:13px; display:flex; flex-direction:column; gap:10px;"></div>
+  <div style="padding:10px; border-top:1px solid var(--border); display:flex; gap:6px;">
+    <input type="text" id="claudeChatInput" placeholder="Ej. ¿qué tarea está en riesgo?" style="flex:1; border:1px solid var(--border); border-radius:8px; padding:9px 10px; font-family:inherit; font-size:13px;">
+    <button id="btnSendClaudeChat" class="btn btn-accent" style="padding:8px 14px;">➤</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="deleteTaskModal">
+  <div class="modal-box">
+    <h2 id="deleteTaskTitle">Eliminar tarea</h2>
+    <p class="hint2" id="deleteTaskDesc"></p>
+    <div class="modal-actions" id="deleteTaskActions" style="flex-direction:column; align-items:stretch; gap:8px;"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="exportModal">
+  <div class="modal-box">
+    <h2>Exportar propuesta en PDF</h2>
+    <p class="hint2">Estos datos aparecen en la portada del documento para el cliente.</p>
+    <div class="modal-field"><label>Cliente</label><input type="text" id="expCliente" placeholder="Ej. Coopenae"></div>
+    <div class="modal-field"><label>Integrador / Partner</label><input type="text" id="expIntegrador" placeholder="Ej. Serkes"></div>
+    <div class="modal-field"><label>Preparado por</label><input type="text" id="expPreparadoPor" placeholder="Ej. Geraldine Sánchez – Imagine CX"></div>
+    <div class="modal-field"><label>Fecha del documento</label><input type="date" id="expFecha"></div>
+    <div class="modal-field"><label style="display:flex; align-items:center; gap:6px; text-transform:none; font-size:13px; color:var(--charcoal);"><input type="checkbox" id="expIncludeCosts" style="width:auto;"> Incluir página de recursos y costos</label></div>
+    <div class="export-progress" id="exportProgress">Generando PDF...</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCancelExport">Cancelar</button>
+      <button class="btn btn-accent" id="btnConfirmExport">Generar PDF</button>
+    </div>
+  </div>
+</div>
+
+<div id="printRoot"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* ============================================================
+   CALENDARIO COLOMBIANO (Ley Emiliani + festivos fijos)
+   ============================================================ */
+function computeEaster(year) {
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+}
+function moveToMonday(date) { const d = new Date(date); while (d.getDay() !== 1) d.setDate(d.getDate() + 1); return d; }
+function colombianHolidays(year) {
+  const holidays = [];
+  const add = (d) => holidays.push(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+  add(new Date(year, 0, 1)); add(new Date(year, 4, 1)); add(new Date(year, 6, 20));
+  add(new Date(year, 7, 7)); add(new Date(year, 11, 8)); add(new Date(year, 11, 25));
+  [[0,6],[2,19],[5,29],[7,15],[9,12],[10,1],[10,11]].forEach(([m,dd]) => add(moveToMonday(new Date(year, m, dd))));
+  const easter = computeEaster(year);
+  const off = (n) => { const d = new Date(easter); d.setDate(d.getDate() + n); add(d); };
+  off(-3); off(-2); off(43); off(64); off(71);
+  return holidays;
+}
+function buildHolidaySet(startYear, endYear) {
+  const set = new Set();
+  for (let y = startYear; y <= endYear; y++) colombianHolidays(y).forEach(d => set.add(d.toDateString()));
+  return set;
+}
+function isWorkingDay(date, hs) { const day = date.getDay(); if (day === 0 || day === 6) return false; if (hs.has(date.toDateString())) return false; return true; }
+function nextWorkingDay(date, hs) { const d = new Date(date); while (!isWorkingDay(d, hs)) d.setDate(d.getDate() + 1); return d; }
+function addWorkingDays(start, days, hs) {
+  let d = nextWorkingDay(start, hs); let current = new Date(d); let count = 1;
+  while (count < days) { current.setDate(current.getDate() + 1); if (isWorkingDay(current, hs)) count++; }
+  return { start: d, end: current };
+}
+function shiftWorkingDays(date, n, hs) {
+  let d = new Date(date);
+  if (n === 0) return nextWorkingDay(d, hs);
+  let count = 0; const step = n > 0 ? 1 : -1; const target = Math.abs(n);
+  while (count < target) { d.setDate(d.getDate() + step); if (isWorkingDay(d, hs)) count++; }
+  return d;
+}
+
+/* ============================================================
+   PRECISIÓN DE HORAS: permite que dos tareas cortas compartan el
+   mismo día (ej. una en la mañana, otra en la tarde), igual que
+   hace MS Project, en vez de siempre saltar al día completo siguiente.
+   Divide el día laboral en dos bloques (mañana / tarde) alrededor de
+   una hora de almuerzo, sumando entre los dos el total de horas
+   laborables configurado (por defecto 8h → 08:00-12:00 y 13:00-17:00).
+   ============================================================ */
+function getDayBlocks(hoursPerDay) {
+  const half = hoursPerDay / 2;
+  return [{ startH: 8, endH: 8 + half }, { startH: 8 + half + 1, endH: 8 + half + 1 + half }];
+}
+function hourOf(dt) { return dt.getHours() + dt.getMinutes() / 60 + dt.getSeconds() / 3600; }
+function setHourOf(dt, h) { const d = new Date(dt); const hh = Math.floor(h); const mm = Math.round((h - hh) * 60); d.setHours(hh, mm, 0, 0); return d; }
+function nextWorkInstant(dt, hs, hoursPerDay) {
+  let d = new Date(dt);
+  for (let guard = 0; guard < 400; guard++) {
+    if (!isWorkingDay(d, hs)) { d.setDate(d.getDate() + 1); d = setHourOf(d, getDayBlocks(hoursPerDay)[0].startH); continue; }
+    const blocks = getDayBlocks(hoursPerDay); const h = hourOf(d);
+    if (h < blocks[0].startH) return setHourOf(d, blocks[0].startH);
+    if (h >= blocks[0].startH && h < blocks[0].endH) return d;
+    if (h >= blocks[0].endH && h < blocks[1].startH) return setHourOf(d, blocks[1].startH);
+    if (h >= blocks[1].startH && h < blocks[1].endH) return d;
+    d.setDate(d.getDate() + 1); d = setHourOf(d, blocks[0].startH);
+  }
+  return d;
+}
+function prevWorkInstant(dt, hs, hoursPerDay) {
+  let d = new Date(dt);
+  for (let guard = 0; guard < 400; guard++) {
+    if (!isWorkingDay(d, hs)) { d.setDate(d.getDate() - 1); d = setHourOf(d, getDayBlocks(hoursPerDay)[1].endH); continue; }
+    const blocks = getDayBlocks(hoursPerDay); const h = hourOf(d);
+    if (h > blocks[1].endH) return setHourOf(d, blocks[1].endH);
+    if (h > blocks[1].startH && h <= blocks[1].endH) return d;
+    if (h > blocks[0].endH && h <= blocks[1].startH) return setHourOf(d, blocks[0].endH);
+    if (h > blocks[0].startH && h <= blocks[0].endH) return d;
+    d.setDate(d.getDate() - 1); d = setHourOf(d, blocks[1].endH);
+  }
+  return d;
+}
+function addWorkHours(startDt, hours, hs, hoursPerDay) {
+  const dir = hours >= 0 ? 1 : -1;
+  let remaining = Math.abs(hours);
+  let current = dir > 0 ? nextWorkInstant(startDt, hs, hoursPerDay) : prevWorkInstant(startDt, hs, hoursPerDay);
+  let guard = 0;
+  while (remaining > 1e-9 && guard < 5000) {
+    guard++;
+    const blocks = getDayBlocks(hoursPerDay); const h = hourOf(current);
+    if (dir > 0) {
+      const blockEnd = (h < blocks[0].endH) ? blocks[0].endH : blocks[1].endH;
+      const avail = blockEnd - h;
+      if (remaining <= avail + 1e-9) { current = setHourOf(current, h + remaining); remaining = 0; }
+      else { remaining -= avail; current = nextWorkInstant(setHourOf(current, blockEnd), hs, hoursPerDay); }
+    } else {
+      const blockStart = (h > blocks[1].startH) ? blocks[1].startH : blocks[0].startH;
+      const avail = h - blockStart;
+      if (remaining <= avail + 1e-9) { current = setHourOf(current, h - remaining); remaining = 0; }
+      else { remaining -= avail; current = prevWorkInstant(setHourOf(current, blockStart), hs, hoursPerDay); }
+    }
+  }
+  return current;
+}
+
+/* ============================================================
+   PARSER DE PREDECESORAS ESTILO MS PROJECT: "2FS+3,4SS-1,5"
+   ============================================================ */
+function parsePredText(text) {
+  if (!text) return [];
+  return text.split(',').map(s => s.trim()).filter(Boolean).map(tok => {
+    const m = tok.match(/^([0-9]+(?:\.[0-9]+)*)\s*(FS|SS|FF|SF)?\s*([+-]\d+)?$/i);
+    if (!m) return null;
+    return { wbs: m[1], type: (m[2] || 'FS').toUpperCase(), lag: m[3] ? parseInt(m[3], 10) : 0 };
+  }).filter(Boolean);
+}
+
+/* ============================================================
+   WBS + JERARQUÍA
+   ============================================================ */
+function computeWbsAndTree(tasks) {
+  const byParent = {};
+  tasks.forEach(t => { const p = t.parentId || '__root__'; (byParent[p] = byParent[p] || []).push(t); });
+  const wbsMap = {}; const flat = [];
+  let counter = 0;
+  function walk(parentKey, depth) {
+    const kids = byParent[parentKey] || [];
+    kids.forEach((t) => {
+      counter++;
+      const num = String(counter);
+      wbsMap[t.id] = num; flat.push({ task: t, depth, wbs: num });
+      walk(t.id, depth + 1);
+    });
+  }
+  walk('__root__', 0);
+  const hasChildren = {}; tasks.forEach(t => { if (t.parentId) hasChildren[t.parentId] = true; });
+  return { wbsMap, flat, hasChildren };
+}
+
+/* ============================================================
+   MOTOR CPM v2: jerarquía + 4 tipos de dependencia + hitos
+   ============================================================ */
+function scheduleProjectV2(tasks, projectStart, holidaySet, hoursPerDay) {
+  hoursPerDay = hoursPerDay || 8;
+  const { wbsMap, hasChildren, flat } = computeWbsAndTree(tasks);
+  const wbsToId = {}; Object.entries(wbsMap).forEach(([id, wbs]) => wbsToId[wbs] = id);
+  const byId = Object.fromEntries(tasks.map(t => [t.id, t]));
+  const leaves = tasks.filter(t => !hasChildren[t.id]);
+  leaves.forEach(t => {
+    t._preds = parsePredText(t.predText).map(p => ({ id: wbsToId[p.wbs], type: p.type, lag: p.lag })).filter(p => p.id && byId[p.id] && !hasChildren[p.id]);
+  });
+  const inDegree = {}; leaves.forEach(t => inDegree[t.id] = 0);
+  leaves.forEach(t => t._preds.forEach(() => inDegree[t.id]++));
+  const queue = leaves.filter(t => t._preds.length === 0).map(t => t.id);
+  const order = []; const visited = new Set();
+  while (queue.length) {
+    const id = queue.shift(); if (visited.has(id)) continue; visited.add(id); order.push(id);
+    leaves.forEach(t => { if (t._preds.some(p => p.id === id)) { inDegree[t.id]--; if (inDegree[t.id] === 0 && !visited.has(t.id)) queue.push(t.id); } });
+  }
+  const results = {};
+  const projectStartInstant = nextWorkInstant(projectStart, holidaySet, hoursPerDay);
+  order.forEach(id => {
+    const t = byId[id];
+    const isMilestone = !!t.isMilestone || (parseFloat(t.duration) || 0) === 0;
+    const alloc = parseFloat(t.allocation) > 0 ? parseFloat(t.allocation) : 100;
+    const effectiveHours = isMilestone ? 0 : Math.max(0.5, ((parseFloat(t.duration) || 1) * hoursPerDay) / (alloc / 100));
+    let candidates = [];
+    t._preds.forEach(p => {
+      const pr = results[p.id]; if (!pr) return;
+      const lagHours = p.lag * hoursPerDay;
+      if (p.type === 'FS') candidates.push(addWorkHours(pr.end, lagHours, holidaySet, hoursPerDay));
+      else if (p.type === 'SS') candidates.push(addWorkHours(pr.start, lagHours, holidaySet, hoursPerDay));
+      else if (p.type === 'FF') { const ce = addWorkHours(pr.end, lagHours, holidaySet, hoursPerDay); candidates.push(effectiveHours > 0 ? addWorkHours(ce, -effectiveHours, holidaySet, hoursPerDay) : ce); }
+      else if (p.type === 'SF') { const ce = addWorkHours(pr.start, lagHours, holidaySet, hoursPerDay); candidates.push(effectiveHours > 0 ? addWorkHours(ce, -effectiveHours, holidaySet, hoursPerDay) : ce); }
+    });
+    let start;
+    if (t.manualStartDateTime) {
+      start = new Date(t.manualStartDateTime);
+    } else if (t.manualStart) {
+      start = nextWorkInstant(new Date(t.manualStart + 'T08:00:00'), holidaySet, hoursPerDay);
+    } else {
+      start = candidates.length ? new Date(Math.max(...candidates.map(d => d.getTime()))) : projectStartInstant;
+      start = nextWorkInstant(start, holidaySet, hoursPerDay);
+    }
+    const isPinned = !!(t.manualStart || t.manualStartDateTime);
+    if (isMilestone) { results[id] = { start, end: start, effectiveDays: 0, isMilestone: true, manual: isPinned }; }
+    else {
+      const end = t.manualEndDateTime ? new Date(t.manualEndDateTime) : addWorkHours(start, effectiveHours, holidaySet, hoursPerDay);
+      results[id] = { start, end, effectiveDays: Math.round((effectiveHours / hoursPerDay) * 100) / 100, isMilestone: false, manual: isPinned };
+    }
+  });
+  if (order.length) {
+    const projectEnd = new Date(Math.max(...Object.values(results).map(r => r.end.getTime())));
+    const lf = {};
+    [...order].reverse().forEach(id => {
+      const successors = leaves.filter(t => t._preds.some(p => p.id === id) && results[t.id]);
+      if (successors.length === 0) lf[id] = projectEnd;
+      else lf[id] = new Date(Math.min(...successors.map(s => {
+        const dur = results[s.id].end.getTime() - results[s.id].start.getTime();
+        return lf[s.id].getTime() - dur;
+      })));
+    });
+    const oneHourMs = 3600 * 1000;
+    order.forEach(id => { const slackMs = lf[id].getTime() - results[id].end.getTime(); results[id].critical = Math.abs(slackMs) < oneHourMs; });
+  }
+  function rollup(taskId) {
+    const kids = tasks.filter(t => t.parentId === taskId);
+    if (kids.length === 0) return results[taskId];
+    let starts = [], ends = [];
+    kids.forEach(k => { const r = hasChildren[k.id] ? rollup(k.id) : results[k.id]; if (r) { starts.push(r.start); ends.push(r.end); } });
+    if (starts.length === 0) return null;
+    const r = { start: new Date(Math.min(...starts.map(d => d.getTime()))), end: new Date(Math.max(...ends.map(d => d.getTime()))), isPhase: true };
+    results[taskId] = r; return r;
+  }
+  tasks.filter(t => hasChildren[t.id]).forEach(t => rollup(t.id));
+  return { results, wbsMap, hasChildren, flat };
+}
+
+/* ============================================================
+   ESTADO Y PERSISTENCIA
+   ============================================================ */
+/* ============================================================
+   ALMACENAMIENTO: funciona dentro de Claude (window.storage)
+   y también como página publicada normal (localStorage), para
+   que cualquier PM del equipo pueda usarla desde GitHub Pages.
+   ============================================================ */
+const hasArtifactStorage = (typeof window !== 'undefined') && !!window.storage;
+async function storageGet(key) {
+  if (hasArtifactStorage) { try { return await window.storage.get(key); } catch (e) { return null; } }
+  try { const v = localStorage.getItem(key); return v !== null ? { key, value: v } : null; } catch (e) { return null; }
+}
+async function storageSet(key, value) {
+  if (hasArtifactStorage) { try { return await window.storage.set(key, value); } catch (e) { return null; } }
+  try { localStorage.setItem(key, value); return { key, value }; } catch (e) { return null; }
+}
+
+let state = { projects: [], currentId: null };
+const uid = () => 'p_' + Math.random().toString(36).slice(2, 9);
+const taskUid = () => 't_' + Math.random().toString(36).slice(2, 9);
+
+function normalizeTask(t) {
+  return {
+    id: t.id || taskUid(), name: t.name || '', parentId: t.parentId || null,
+    duration: t.duration ?? '', allocation: t.allocation ?? 100, resource: t.resource || '',
+    predText: t.predText || '', completado: t.completado ?? 0, isMilestone: !!t.isMilestone,
+    manualStart: t.manualStart || '', manualStartDateTime: t.manualStartDateTime || '', manualEndDateTime: t.manualEndDateTime || ''
+  };
+}
+function defaultProject(name) {
+  return { id: uid(), name: name || 'Nuevo proyecto', start: new Date().toISOString().slice(0, 10), tasks: [], baseline: null, resources: [], includeColombianHolidays: true, customHolidays: [], hoursPerDay: 8, _simpleIdMigration: true };
+}
+function migratePredTextToSimpleIds(p) {
+  if (p._simpleIdMigration) return;
+  const byParent = {};
+  p.tasks.forEach(t => { const pk = t.parentId || '__root__'; (byParent[pk] = byParent[pk] || []).push(t); });
+  const oldWbsMap = {};
+  (function walkOld(parentKey, prefix) {
+    (byParent[parentKey] || []).forEach((t, idx) => {
+      const wbs = prefix ? `${prefix}.${idx + 1}` : `${idx + 1}`;
+      oldWbsMap[t.id] = wbs;
+      walkOld(t.id, wbs);
+    });
+  })('__root__', '');
+  const oldWbsToId = {}; Object.entries(oldWbsMap).forEach(([id, wbs]) => oldWbsToId[wbs] = id);
+  const { wbsMap: newSimpleMap } = computeWbsAndTree(p.tasks);
+  p.tasks.forEach(t => {
+    if (!t.predText) return;
+    const parsed = parsePredText(t.predText);
+    const converted = parsed.map(part => {
+      const targetId = oldWbsToId[part.wbs];
+      if (!targetId) return null;
+      const newNum = newSimpleMap[targetId];
+      if (!newNum) return null;
+      const typeSuffix = part.type === 'FS' ? '' : part.type;
+      const lagSuffix = part.lag ? (part.lag > 0 ? '+' : '') + part.lag : '';
+      return `${newNum}${typeSuffix}${lagSuffix}`;
+    }).filter(Boolean);
+    t.predText = converted.join(',');
+  });
+  p._simpleIdMigration = true;
+}
+function normalizeProject(p) {
+  p.tasks = (p.tasks || []).map(normalizeTask);
+  migratePredTextToSimpleIds(p);
+  p.resources = p.resources || [];
+  p.includeColombianHolidays = p.includeColombianHolidays !== false;
+  p.customHolidays = p.customHolidays || [];
+  p.hoursPerDay = parseFloat(p.hoursPerDay) > 0 ? parseFloat(p.hoursPerDay) : 8;
+  p.clientMode = !!p.clientMode;
+  p.budget = p.budget || { roles: [], ingresos: '', duracionMeses: 6, startMonth: '' };
+  p.budget.roles = p.budget.roles || [];
+  p.budget.duracionMeses = parseInt(p.budget.duracionMeses) > 0 ? parseInt(p.budget.duracionMeses) : 6;
+  p.budget.startMonth = p.budget.startMonth || (p.start || '').slice(0, 7);
+  p.budget.contractValue = p.budget.contractValue || '';
+  p.budget.billingMode = p.budget.billingMode || 'flat';
+  // Migrar de "ingresos" (un solo numero fijo) a "monthlyIngresos" (arreglo por mes)
+  if (!p.budget.monthlyIngresos) {
+    const flat = parseFloat(p.budget.ingresos) || 0;
+    p.budget.monthlyIngresos = new Array(p.budget.duracionMeses).fill(flat);
+  }
+  while (p.budget.monthlyIngresos.length < p.budget.duracionMeses) p.budget.monthlyIngresos.push(0);
+  p.budget.monthlyIngresos.length = p.budget.duracionMeses;
+  p.budget.roles.forEach(r => {
+    r.monthlyHours = r.monthlyHours || [];
+    r.monthlyHoursReal = r.monthlyHoursReal || [];
+    while (r.monthlyHours.length < p.budget.duracionMeses) r.monthlyHours.push(0);
+    while (r.monthlyHoursReal.length < p.budget.duracionMeses) r.monthlyHoursReal.push(0);
+  });
+  return p;
+}
+function currentProject() { return state.projects.find(p => p.id === state.currentId); }
+function saveIndicator(msg) {
+  const el = document.getElementById('saveIndicator'); el.textContent = msg;
+  setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 1500);
+}
+async function persistAll() {
+  try {
+    await storageSet('cronogramas2:index', JSON.stringify(state.projects.map(p => p.id)));
+    for (const p of state.projects) await storageSet('cronogramas2:project:' + p.id, JSON.stringify(p));
+    await storageSet('cronogramas2:current', state.currentId || '');
+    saveIndicator('Guardado');
+  } catch (e) { console.error(e); saveIndicator('Error al guardar'); }
+}
+async function loadAll() {
+  try {
+    const idxRes = await storageGet('cronogramas2:index');
+    if (!idxRes) return false;
+    const ids = JSON.parse(idxRes.value); const projects = [];
+    for (const id of ids) { try { const r = await storageGet('cronogramas2:project:' + id); if (r) { const p = normalizeProject(JSON.parse(r.value)); projects.push(p); } } catch (e) {} }
+    if (projects.length === 0) return false;
+    state.projects = projects;
+    let cur = ''; try { const c = await storageGet('cronogramas2:current'); if (c) cur = c.value; } catch (e) {}
+    state.currentId = cur && projects.find(p => p.id === cur) ? cur : projects[0].id;
+    return true;
+  } catch (e) { console.error(e); return false; }
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); }
+
+/* ============================================================
+   TABS
+   ============================================================ */
+function renderTabs() {
+  const bar = document.getElementById('tabsBar'); bar.innerHTML = '';
+  state.projects.forEach(p => {
+    const tab = document.createElement('div');
+    tab.className = 'tab' + (p.id === state.currentId ? ' active' : '');
+    tab.innerHTML = `<span>${escapeHtml(p.name)}</span>`;
+    if (state.projects.length > 1) {
+      const del = document.createElement('span'); del.className = 'tab-del'; del.textContent = ' ×';
+      del.onclick = (ev) => { ev.stopPropagation(); deleteProject(p.id); };
+      tab.appendChild(del);
+    }
+    tab.onclick = () => { state.currentId = p.id; renderAll(); persistAll(); };
+    bar.appendChild(tab);
+  });
+  const addBtn = document.createElement('button'); addBtn.className = 'tab-add'; addBtn.textContent = '+ Nuevo proyecto';
+  addBtn.onclick = () => { const p = defaultProject('Proyecto ' + (state.projects.length + 1)); state.projects.push(p); state.currentId = p.id; renderAll(); persistAll(); };
+  bar.appendChild(addBtn);
+}
+function deleteProject(id) {
+  if (!confirm('¿Eliminar este proyecto y todas sus tareas? Esta acción no se puede deshacer.')) return;
+  state.projects = state.projects.filter(p => p.id !== id);
+  if (state.projects.length === 0) {
+    const fresh = defaultProject('Proyecto 1');
+    state.projects = [fresh]; state.currentId = fresh.id;
+  } else if (state.currentId === id) {
+    state.currentId = state.projects[0].id;
+  }
+  renderAll(); persistAll();
+}
+function deleteCurrentProject() {
+  const proj = currentProject(); if (!proj) return;
+  deleteProject(proj.id);
+}
+
+/* ============================================================
+   CÁLCULO GLOBAL
+   ============================================================ */
+let scheduleResults = {}; let holidaySetGlobal = new Set(); let wbsMapGlobal = {}; let hasChildrenGlobal = {};
+
+function ensureResourceRegistry(proj) {
+  const names = new Set(proj.resources.map(r => r.name.trim().toLowerCase()));
+  proj.tasks.forEach(t => {
+    const name = (t.resource || '').trim();
+    if (name && !names.has(name.toLowerCase())) { proj.resources.push({ name, rate: 0 }); names.add(name.toLowerCase()); }
+  });
+}
+function recalc() {
+  const proj = currentProject();
+  if (!proj) { scheduleResults = {}; return; }
+  ensureResourceRegistry(proj);
+  const startDate = new Date(proj.start + 'T00:00:00');
+  const startYear = startDate.getFullYear();
+  holidaySetGlobal = proj.includeColombianHolidays ? buildHolidaySet(startYear, startYear + 3) : new Set();
+  (proj.customHolidays || []).forEach(ds => { const d = new Date(ds + 'T00:00:00'); holidaySetGlobal.add(d.toDateString()); });
+  const { results, wbsMap, hasChildren } = scheduleProjectV2(proj.tasks, startDate, holidaySetGlobal, proj.hoursPerDay || 8);
+  scheduleResults = results; wbsMapGlobal = wbsMap; hasChildrenGlobal = hasChildren;
+}
+function taskCost(t) {
+  const proj = currentProject(); if (!proj) return 0;
+  const res = proj.resources.find(r => r.name.trim().toLowerCase() === (t.resource || '').trim().toLowerCase());
+  const rate = res ? parseFloat(res.rate) || 0 : 0;
+  return (parseFloat(t.duration) || 0) * rate;
+}
+function computeExpectedProgress(r) {
+  if (!r || r.isMilestone) return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  if (today < r.start) return 0;
+  if (today > r.end) return 100;
+  let elapsed = 0; let d = new Date(r.start);
+  while (d <= today) { if (isWorkingDay(d, holidaySetGlobal)) elapsed++; d.setDate(d.getDate() + 1); }
+  const total = r.effectiveDays || 1;
+  return Math.round(Math.min(100, (elapsed / total) * 100));
+}
+function getLeafDescendants(proj, taskId) {
+  const direct = proj.tasks.filter(t => t.parentId === taskId);
+  let leaves = [];
+  direct.forEach(t => {
+    if (hasChildrenGlobal[t.id]) leaves = leaves.concat(getLeafDescendants(proj, t.id));
+    else leaves.push(t);
+  });
+  return leaves;
+}
+function computePhaseProgress(proj, phaseId) {
+  const leaves = getLeafDescendants(proj, phaseId).filter(t => scheduleResults[t.id] && !scheduleResults[t.id].isMilestone);
+  if (leaves.length === 0) return null;
+  let sumWeight = 0, sumReal = 0, sumEsp = 0;
+  leaves.forEach(t => {
+    const w = parseFloat(t.duration) || 0.01;
+    sumWeight += w;
+    sumReal += w * (parseFloat(t.completado) || 0);
+    sumEsp += w * (computeExpectedProgress(scheduleResults[t.id]) || 0);
+  });
+  if (sumWeight === 0) return null;
+  return { real: Math.round(sumReal / sumWeight), esperado: Math.round(sumEsp / sumWeight) };
+}
+
+/* ============================================================
+   TOOLBAR
+   ============================================================ */
+function renderToolbar() {
+  const proj = currentProject();
+  const nameInput = document.getElementById('projectName'); const startInput = document.getElementById('projectStart');
+  if (!proj) { nameInput.value = ''; startInput.value = ''; return; }
+  nameInput.value = proj.name; startInput.value = proj.start;
+  document.getElementById('baselineInfo').textContent = proj.baseline ? 'Línea base guardada' : 'Sin línea base';
+  document.body.classList.toggle('client-mode', !!proj.clientMode);
+  const btnClient = document.getElementById('btnClientMode');
+  btnClient.textContent = proj.clientMode ? '👁️ Modo cliente: activado (sin costos)' : '🙈 Modo cliente (ocultar costos)';
+  btnClient.style.background = proj.clientMode ? 'var(--orange-light)' : '';
+  btnClient.style.color = proj.clientMode ? '#9C5A0E' : '';
+}
+
+/* ============================================================
+   TABLA DE TAREAS (WBS jerárquico)
+   ============================================================ */
+function flatOrder(proj) {
+  const byParent = {};
+  proj.tasks.forEach(t => { const p = t.parentId || '__root__'; (byParent[p] = byParent[p] || []).push(t); });
+  const out = [];
+  function walk(parentKey, depth) { (byParent[parentKey] || []).forEach(t => { out.push({ task: t, depth }); walk(t.id, depth + 1); }); }
+  walk('__root__', 0);
+  return out;
+}
+function indentTask(proj, task) {
+  const order = flatOrder(proj); const idx = order.findIndex(o => o.task.id === task.id);
+  for (let i = idx - 1; i >= 0; i--) { if (order[i].task.parentId === task.parentId) { task.parentId = order[i].task.id; return true; } }
+  return false;
+}
+function outdentTask(proj, task) {
+  const parent = proj.tasks.find(t => t.id === task.parentId);
+  task.parentId = parent ? (parent.parentId || null) : null;
+  return true;
+}
+function siblingsOf(proj, task) { return proj.tasks.filter(t => t.parentId === task.parentId); }
+function moveTaskUp(proj, task) {
+  const sibs = siblingsOf(proj, task); const idx = sibs.indexOf(task);
+  if (idx <= 0) return false;
+  const prev = sibs[idx - 1];
+  const ai = proj.tasks.indexOf(task), bi = proj.tasks.indexOf(prev);
+  [proj.tasks[ai], proj.tasks[bi]] = [proj.tasks[bi], proj.tasks[ai]];
+  return true;
+}
+function moveTaskDown(proj, task) {
+  const sibs = siblingsOf(proj, task); const idx = sibs.indexOf(task);
+  if (idx === -1 || idx >= sibs.length - 1) return false;
+  const next = sibs[idx + 1];
+  const ai = proj.tasks.indexOf(task), bi = proj.tasks.indexOf(next);
+  [proj.tasks[ai], proj.tasks[bi]] = [proj.tasks[bi], proj.tasks[ai]];
+  return true;
+}
+function insertSiblingAfter(proj, task) {
+  const newTask = normalizeTask({ parentId: task.parentId });
+  const idx = proj.tasks.indexOf(task);
+  proj.tasks.splice(idx + 1, 0, newTask);
+  return newTask;
+}
+function computeTaskEstado(t, r, isPhase) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  let estado = '—', estadoClass = '';
+  if (r) {
+    if (isPhase) { estado = 'Fase'; estadoClass = 'badge-phase'; }
+    else {
+      const completado = parseFloat(t.completado) || 0;
+      if (completado >= 100) { estado = 'Completada'; estadoClass = 'badge-ok'; }
+      else if (r.end < today) { estado = 'Vencida'; estadoClass = 'badge-critical'; }
+      else if (t.isMilestone || (parseFloat(t.duration) || 0) === 0) { estado = 'Hito'; estadoClass = 'badge-phase'; }
+      else { estado = r.critical ? 'Crítica' : 'En curso'; estadoClass = r.critical ? 'badge-critical' : 'badge-ok'; }
+    }
+  }
+  return { estado, estadoClass };
+}
+
+/* ============================================================
+   FILTROS DE LA TABLA DE TAREAS
+   ============================================================ */
+let taskFilters = { text: '', resource: '', estado: '', avanceMin: '', avanceMax: '', asignMin: '', asignMax: '' };
+function filtersActive() {
+  const f = taskFilters;
+  return !!(f.text || f.resource || f.estado || f.avanceMin !== '' || f.avanceMax !== '' || f.asignMin !== '' || f.asignMax !== '');
+}
+function taskDirectlyMatches(proj, t, r, isPhase) {
+  const f = taskFilters;
+  if (f.text) {
+    const txt = f.text.toLowerCase();
+    if (!(t.name || '').toLowerCase().includes(txt) && !(t.resource || '').toLowerCase().includes(txt)) return false;
+  }
+  if (f.resource && (t.resource || '') !== f.resource) return false;
+  if (f.estado) {
+    const { estado } = computeTaskEstado(t, r, isPhase);
+    if (estado !== f.estado) return false;
+  }
+  let real = null;
+  if (isPhase) { const pp = computePhaseProgress(proj, t.id); real = pp ? pp.real : null; }
+  else real = parseFloat(t.completado) || 0;
+  if (real !== null) {
+    if (f.avanceMin !== '' && real < parseFloat(f.avanceMin)) return false;
+    if (f.avanceMax !== '' && real > parseFloat(f.avanceMax)) return false;
+  } else if (f.avanceMin !== '' || f.avanceMax !== '') return false;
+  if (!isPhase) {
+    const asign = parseFloat(t.allocation) || 0;
+    if (f.asignMin !== '' && asign < parseFloat(f.asignMin)) return false;
+    if (f.asignMax !== '' && asign > parseFloat(f.asignMax)) return false;
+  } else if (f.asignMin !== '' || f.asignMax !== '') return false;
+  return true;
+}
+function computeVisibleTaskIds(proj) {
+  if (!filtersActive()) return null;
+  const idSet = new Set();
+  const parentOf = {}; proj.tasks.forEach(t => parentOf[t.id] = t.parentId);
+  const markAncestors = (id) => { let p = parentOf[id]; while (p) { idSet.add(p); p = parentOf[p]; } };
+  const markDescendants = (id) => { proj.tasks.filter(t => t.parentId === id).forEach(c => { idSet.add(c.id); markDescendants(c.id); }); };
+  proj.tasks.forEach(t => {
+    const isPhase = !!hasChildrenGlobal[t.id];
+    const r = scheduleResults[t.id];
+    if (taskDirectlyMatches(proj, t, r, isPhase)) {
+      idSet.add(t.id); markAncestors(t.id);
+      if (isPhase && taskFilters.text) markDescendants(t.id);
+    }
+  });
+  return idSet;
+}
+function renderFilterControls(proj) {
+  const resSelect = document.getElementById('filterResource');
+  const names = proj.resources.map(r => r.name).filter(Boolean);
+  const current = taskFilters.resource;
+  resSelect.innerHTML = '<option value="">Todos</option>' + names.map(n => `<option value="${escapeHtml(n)}" ${n === current ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('');
+  const textEl = document.getElementById('filterText');
+  if (document.activeElement !== textEl) textEl.value = taskFilters.text;
+  document.getElementById('filterEstado').value = taskFilters.estado;
+  const setIfNotFocused = (id, val) => { const el = document.getElementById(id); if (document.activeElement !== el) el.value = val; };
+  setIfNotFocused('filterAvanceMin', taskFilters.avanceMin);
+  setIfNotFocused('filterAvanceMax', taskFilters.avanceMax);
+  setIfNotFocused('filterAsignMin', taskFilters.asignMin);
+  setIfNotFocused('filterAsignMax', taskFilters.asignMax);
+}
+
+function buildTaskEditPanel(proj, t, r, isPhase, resourceNames) {
+  const resOptions = `<option value="">${isPhase ? '— Sin dueño —' : '— Sin asignar —'}</option>` +
+    resourceNames.map(n => `<option value="${escapeHtml(n)}" ${t.resource === n ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('') +
+    (t.resource && !resourceNames.includes(t.resource) ? `<option value="${escapeHtml(t.resource)}" selected>${escapeHtml(t.resource)}</option>` : '');
+  const field = (label, inputHtml) => `<div><label style="display:block; font-size:11px; color:var(--gray); text-transform:uppercase; letter-spacing:.03em; margin-bottom:5px;">${label}</label>${inputHtml}</div>`;
+  const bigInputStyle = 'width:100%; padding:9px 10px; font-size:13.5px; border:1px solid var(--border); border-radius:7px; font-family:inherit;';
+
+  let fieldsHtml = field('Nombre de la tarea', `<input type="text" data-efield="name" value="${escapeHtml(t.name||'')}" style="${bigInputStyle}">`);
+  fieldsHtml += field(isPhase ? 'Dueño de la fase' : 'Responsable', `<select data-efield="resource" style="${bigInputStyle} cursor:pointer;">${resOptions}</select>`);
+
+  if (!isPhase) {
+    fieldsHtml += field('Asignación (%)', `<input type="number" min="1" max="100" data-efield="allocation" value="${t.allocation ?? 100}" style="${bigInputStyle}">`);
+    fieldsHtml += field('Días-persona (0 = hito)', `<input type="number" min="0" step="0.5" data-efield="duration" value="${t.duration ?? ''}" style="${bigInputStyle}">`);
+    fieldsHtml += field('Predecesoras (número de fila)', `<input type="text" data-efield="predText" value="${escapeHtml(t.predText||'')}" placeholder="ej. 2FS+3" style="${bigInputStyle}">`);
+    fieldsHtml += field('% Avance real', `<input type="number" min="0" max="100" data-efield="completado" value="${t.completado ?? 0}" style="${bigInputStyle}">`);
+    fieldsHtml += field('Fecha inicio manual (vacío = automática)', `<input type="date" data-efield="manualStart" value="${t.manualStart||''}" style="${bigInputStyle}">`);
+    if (r) fieldsHtml += field('Fechas calculadas', `<div style="padding:9px 10px; font-size:13px; color:var(--charcoal); background:var(--gray-light); border-radius:7px;">${r.start.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})} → ${r.end.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})}</div>`);
+  } else {
+    const pp = computePhaseProgress(proj, t.id);
+    fieldsHtml += field('Avance de la fase (calculado de sus tareas)', `<div style="padding:9px 10px; font-size:13px; color:var(--charcoal); background:var(--gray-light); border-radius:7px;">${pp ? `Real ${pp.real}% · Esperado ${pp.esperado}%` : 'Sin tareas con avance todavía'}</div>`);
+    if (r) fieldsHtml += field('Fechas (según sus tareas)', `<div style="padding:9px 10px; font-size:13px; color:var(--charcoal); background:var(--gray-light); border-radius:7px;">${r.start.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})} → ${r.end.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})}</div>`);
+  }
+
+  return `<div class="task-edit-panel">
+    <div class="task-edit-grid">${fieldsHtml}</div>
+  </div>`;
+}
+function wireTaskEditPanel(editTr, proj, t) {
+  editTr.querySelectorAll('[data-efield]').forEach(inp => {
+    const field = inp.dataset.efield;
+    const evName = inp.tagName === 'SELECT' ? 'change' : 'input';
+    inp.addEventListener(evName, () => {
+      if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; }
+      else if (field === 'manualStart') { t.manualStart = inp.value; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
+      else t[field] = inp.value;
+      recalc(); withScrollPreserved(renderAll_inner); persistAll();
+    });
+  });
+}
+
+
+
+function closeDeleteTaskModal() { document.getElementById('deleteTaskModal').classList.remove('open'); }
+function openDeleteTaskModal(proj, t, isPhase) {
+  const modal = document.getElementById('deleteTaskModal');
+  const title = document.getElementById('deleteTaskTitle');
+  const desc = document.getElementById('deleteTaskDesc');
+  const actions = document.getElementById('deleteTaskActions');
+  const directChildren = proj.tasks.filter(o => o.parentId === t.id);
+  const allDescendants = getAllDescendantIds(proj, t.id);
+
+  title.textContent = `Eliminar "${t.name || '(sin nombre)'}"`;
+  actions.innerHTML = '';
+
+  const addBtn = (label, cls, onClick) => {
+    const b = document.createElement('button'); b.className = `btn ${cls}`; b.textContent = label;
+    b.style.width = '100%'; b.addEventListener('click', () => { onClick(); closeDeleteTaskModal(); });
+    actions.appendChild(b);
+  };
+
+  if (isPhase && directChildren.length > 0) {
+    desc.textContent = `Esta fase tiene ${allDescendants.length} tarea(s) dentro. ¿Qué quieres hacer?`;
+    addBtn('Eliminar solo esta fase (sus tareas suben de nivel)', 'btn-ghost', () => {
+      directChildren.forEach(c => { c.parentId = t.parentId; });
+      proj.tasks = proj.tasks.filter(x => x.id !== t.id);
+      recalc(); renderAll_inner(); persistAll();
+    });
+    addBtn(`Eliminar la fase y sus ${allDescendants.length} tarea(s)`, 'btn-accent', () => {
+      const idsToRemove = new Set([t.id, ...allDescendants]);
+      proj.tasks = proj.tasks.filter(x => !idsToRemove.has(x.id));
+      recalc(); renderAll_inner(); persistAll();
+    });
+    addBtn('Cancelar', 'btn-ghost', () => {});
+  } else {
+    desc.textContent = '¿Eliminar esta tarea? Esta acción no se puede deshacer.';
+    addBtn('Eliminar', 'btn-accent', () => {
+      proj.tasks = proj.tasks.filter(x => x.id !== t.id);
+      recalc(); renderAll_inner(); persistAll();
+    });
+    addBtn('Cancelar', 'btn-ghost', () => {});
+  }
+  modal.classList.add('open');
+}
+function getAllDescendantIds(proj, taskId) {
+  const idsToRemove = new Set();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    proj.tasks.forEach(o => { if (o.parentId && (o.parentId === taskId || idsToRemove.has(o.parentId)) && !idsToRemove.has(o.id)) { idsToRemove.add(o.id); changed = true; } });
+  }
+  return Array.from(idsToRemove);
+}
+
+let expandedTaskIds = new Set();
+let selectedTaskId = null;
+function renderTaskTable() {
+  const proj = currentProject(); const tbody = document.getElementById('taskBody'); tbody.innerHTML = '';
+  if (!proj || proj.tasks.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><div class="big">🗓️</div>Aún no hay tareas. Agrega la primera con "+ Agregar tarea".</div></td></tr>`;
+    return;
+  }
+  const order = flatOrder(proj);
+  const wbsLookup = wbsMapGlobal;
+  const resourceNames = proj.resources.map(r => r.name).filter(Boolean);
+  renderFilterControls(proj);
+  const visibleIds = computeVisibleTaskIds(proj);
+  let shownCount = 0, totalCount = 0;
+
+  order.forEach(({ task: t, depth }) => {
+    const isPhase = !!hasChildrenGlobal[t.id];
+    const r = scheduleResults[t.id];
+    totalCount++;
+    if (visibleIds && !visibleIds.has(t.id)) return;
+    shownCount++;
+    const wbs = wbsLookup[t.id] || '';
+    const tr = document.createElement('tr');
+    if (isPhase) tr.className = 'row-phase';
+    if (t.id === selectedTaskId) tr.style.background = 'var(--orange-light)';
+    const { estado, estadoClass } = computeTaskEstado(t, r, isPhase);
+    tr.innerHTML = `
+      <td class="wbs-tag">${wbs}</td>
+      <td>
+        <div class="task-name-cell" style="padding-left:${depth * 16}px;">
+          <div class="indent-controls">
+            <button class="indent-btn" data-act="expand" title="Editar en panel ampliado" style="background:${expandedTaskIds.has(t.id) ? 'var(--orange)' : '#fff'}; color:${expandedTaskIds.has(t.id) ? '#fff' : 'var(--gray)'};">${expandedTaskIds.has(t.id) ? '▲' : '✎'}</button>
+            <button class="indent-btn" data-act="up" title="Mover arriba">↑</button>
+            <button class="indent-btn" data-act="down" title="Mover abajo">↓</button>
+            <button class="indent-btn" data-act="out" title="Quitar nivel (outdent)">←</button>
+            <button class="indent-btn" data-act="in" title="Anidar en la tarea anterior (indent)">→</button>
+            <button class="indent-btn" data-act="addsibling" title="Agregar tarea justo después de esta">+</button>
+          </div>
+          <input type="text" data-field="name" value="${escapeHtml(t.name || '')}" placeholder="Nombre de la tarea" style="font-weight:${isPhase ? 700 : 400};">
+          ${isPhase ? `<button class="btn btn-ghost btn-xs" data-act="addsub" title="Agregar subtarea directamente en esta fase">+ Subtarea</button>` : ''}
+        </div>
+      </td>
+      <td style="text-align:center; font-size:12.5px; color:var(--charcoal);">${(() => {
+        if (isPhase) { return r ? Math.round((r.end - r.start) / 86400000) + 1 : '—'; }
+        return r ? (r.isMilestone ? '0' : r.effectiveDays) : '—';
+      })()}</td>
+      <td>${(() => {
+        if (isPhase) {
+          const pp = computePhaseProgress(proj, t.id);
+          if (!pp) return '<span style="color:var(--gray); font-size:12px;">—</span>';
+          return `<div style="min-width:74px; padding:2px 0;"><span style="font-size:12.5px; font-weight:700; color:var(--phase);">${pp.real}%</span><div style="height:7px; background:var(--gray-light); border-radius:4px; overflow:hidden; width:100%; margin-top:4px;"><div style="height:100%; width:${pp.real}%; background:${pp.real>=100?'var(--green)':'var(--orange)'}; border-radius:4px;"></div></div></div>`;
+        }
+        return `
+        <div style="display:flex; flex-direction:column; gap:4px; min-width:74px; padding:2px 0;">
+          <input type="number" min="0" max="100" data-field="completado" value="${t.completado ?? 0}" style="width:50px; font-weight:600; text-align:center; border:1px solid var(--border); border-radius:5px;">
+          <div style="height:7px; background:var(--gray-light); border-radius:4px; overflow:hidden; width:100%;">
+            <div style="height:100%; width:${Math.min(parseFloat(t.completado)||0,100)}%; background:${(parseFloat(t.completado)||0) >= 100 ? 'var(--green)' : 'var(--orange)'}; border-radius:4px;"></div>
+          </div>
+        </div>`;
+      })()}</td>
+      <td style="text-align:center;">${(() => {
+        if (isPhase) {
+          const pp = computePhaseProgress(proj, t.id);
+          if (!pp) return '<span style="color:var(--gray);">—</span>';
+          return `<div style="min-width:70px; padding:2px 0;"><span style="font-size:12.5px; color:var(--charcoal); font-weight:600;">${pp.esperado}%</span><div style="height:7px; background:var(--gray-light); border-radius:4px; overflow:hidden; width:100%; margin-top:4px;"><div style="height:100%; width:${pp.esperado}%; background:var(--navy); border-radius:4px;"></div></div></div>`;
+        }
+        if (!r || r.isMilestone) return '<span style="color:var(--gray);">—</span>';
+        const esp = computeExpectedProgress(r); return esp === null ? '<span style="color:var(--gray);">—</span>' : `<div style="display:flex; flex-direction:column; gap:4px; min-width:70px; padding:2px 0;"><span style="font-size:12.5px; color:var(--charcoal); font-weight:600; text-align:center;">${esp}%</span><div style="height:7px; background:var(--gray-light); border-radius:4px; overflow:hidden; width:100%;"><div style="height:100%; width:${esp}%; background:var(--navy); border-radius:4px;"></div></div></div>`;
+      })()}</td>
+      <td style="text-align:center;">${(() => {
+        let real, esp;
+        if (isPhase) { const pp = computePhaseProgress(proj, t.id); if (!pp) return ''; real = pp.real; esp = pp.esperado; }
+        else { if (!r || r.isMilestone) return ''; esp = computeExpectedProgress(r); if (esp === null) return ''; real = parseFloat(t.completado) || 0; }
+        const desv = real - esp;
+        const color = desv < -5 ? 'var(--red)' : (desv > 5 ? 'var(--green)' : 'var(--gray)');
+        const bg = desv < -5 ? 'var(--orange-light)' : (desv > 5 ? '#E6F4EC' : 'var(--gray-light)');
+        const sign = desv > 0 ? '+' : '';
+        return `<span class="badge" style="color:${color}; background:${bg}; font-weight:700;">${sign}${desv}%</span>`;
+      })()}</td>
+      <td><select data-field="resource" style="cursor:pointer; min-width:160px;" title="${escapeHtml(t.resource || '')}">
+        <option value="">${isPhase ? '— Sin dueño —' : '— Sin asignar —'}</option>
+        ${resourceNames.map(n => `<option value="${escapeHtml(n)}" ${t.resource === n ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('')}
+        ${t.resource && !resourceNames.includes(t.resource) ? `<option value="${escapeHtml(t.resource)}" selected>${escapeHtml(t.resource)}</option>` : ''}
+        <option value="__new__">+ Nuevo recurso…</option>
+      </select></td>
+      <td>${isPhase ? '' : `<input type="text" data-field="predText" value="${escapeHtml(t.predText || '')}" placeholder="ej. 2FS+3" style="font-size:12px;">`}</td>
+      <td style="min-width:130px;">${isPhase ? `<span style="font-size:12px; white-space:nowrap;">${r ? r.start.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>` : `
+        <input type="date" data-field="manualStart" value="${t.manualStart || (r ? r.start.toISOString().slice(0,10) : '')}" style="font-size:11px; padding:3px; width:100%;" title="Esta fecha se calcula sola; cámbiala si quieres fijarla manualmente">
+        <div style="font-size:9.5px; color:var(--orange); margin-top:2px; white-space:nowrap;">${r && r.manual ? '📌 fecha fijada' : ''}</div>
+      `}</td>
+      <td style="font-size:12px; min-width:105px; white-space:nowrap;">${r ? r.end.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+      <td><span class="badge ${estadoClass}">${estado}</span></td>
+      <td class="row-del" title="Eliminar tarea">🗑</td>
+    `;
+    tr.querySelectorAll('input[data-field], select[data-field]').forEach(inp => {
+      const field = inp.dataset.field;
+      const evName = (inp.tagName === 'SELECT' || inp.type === 'checkbox') ? 'change' : 'input';
+      inp.addEventListener(evName, () => {
+        if (field === 'resource' && inp.value === '__new__') {
+          const name = prompt('Nombre del nuevo recurso:');
+          if (name && name.trim()) {
+            const trimmed = name.trim();
+            if (!proj.resources.some(rr => rr.name.trim().toLowerCase() === trimmed.toLowerCase())) proj.resources.push({ name: trimmed, rate: 0 });
+            t.resource = trimmed;
+          } else {
+            inp.value = t.resource || '';
+            return;
+          }
+        } else if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; }
+        else if (field === 'manualStart') { t.manualStart = inp.value; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
+        else t[field] = inp.type === 'checkbox' ? inp.checked : inp.value;
+        recalc(); withScrollPreserved(renderAll_inner); persistAll();
+      });
+    });
+    tr.querySelector('[data-act="in"]').addEventListener('click', () => { if (indentTask(proj, t)) { recalc(); renderAll_inner(); persistAll(); } });
+    tr.querySelector('[data-act="out"]').addEventListener('click', () => { if (t.parentId) { outdentTask(proj, t); recalc(); renderAll_inner(); persistAll(); } });
+    tr.querySelector('[data-act="up"]').addEventListener('click', () => { if (moveTaskUp(proj, t)) { renderAll_inner(); persistAll(); } });
+    tr.querySelector('[data-act="down"]').addEventListener('click', () => { if (moveTaskDown(proj, t)) { renderAll_inner(); persistAll(); } });
+    tr.querySelector('[data-act="addsibling"]').addEventListener('click', () => { insertSiblingAfter(proj, t); recalc(); renderAll_inner(); persistAll(); });
+    const addSubBtn = tr.querySelector('[data-act="addsub"]');
+    if (addSubBtn) addSubBtn.addEventListener('click', () => {
+      const newTask = normalizeTask({ parentId: t.id });
+      const idx = proj.tasks.indexOf(t);
+      proj.tasks.splice(idx + 1, 0, newTask);
+      recalc(); renderAll_inner(); persistAll();
+    });
+    tr.querySelector('.row-del').addEventListener('click', () => {
+      openDeleteTaskModal(proj, t, isPhase);
+    });
+    tr.querySelector('[data-act="expand"]').addEventListener('click', () => {
+      if (expandedTaskIds.has(t.id)) expandedTaskIds.delete(t.id); else expandedTaskIds.add(t.id);
+      renderTaskTable();
+    });
+    tr.addEventListener('click', (e) => {
+      if (e.target.closest('input, select, button, textarea')) return;
+      selectedTaskId = (selectedTaskId === t.id) ? null : t.id;
+      renderTaskTable();
+    });
+    tbody.appendChild(tr);
+
+    if (expandedTaskIds.has(t.id)) {
+      const editTr = document.createElement('tr');
+      editTr.innerHTML = `<td colspan="12" style="padding:0;">${buildTaskEditPanel(proj, t, r, isPhase, resourceNames)}</td>`;
+      tbody.appendChild(editTr);
+      wireTaskEditPanel(editTr, proj, t);
+    }
+  });
+  const filterCountEl = document.getElementById('filterCount');
+  const hintEl = document.getElementById('addTaskHint');
+  const selTask = selectedTaskId ? proj.tasks.find(t => t.id === selectedTaskId) : null;
+  hintEl.textContent = selTask ? `Se agregará justo después de: "${selTask.name || '(sin nombre)'}"` : 'Se agregará al final (haz clic en una fila para insertar justo después de ella)';
+  if (filtersActive()) {
+    filterCountEl.textContent = `Mostrando ${shownCount} de ${totalCount} tareas`;
+    if (shownCount === 0) tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">Ninguna tarea coincide con los filtros. <span style="cursor:pointer; color:var(--orange); text-decoration:underline;" onclick="document.getElementById('btnClearFilters').click()">Limpiar filtros</span></div></td></tr>`;
+  } else {
+    filterCountEl.textContent = '';
+  }
+}
+
+/* ============================================================
+   RECURSOS Y COSTOS
+   ============================================================ */
+function computeResourceWorkload(proj) {
+  const dayMap = {};
+  proj.tasks.forEach(t => {
+    if (hasChildrenGlobal[t.id]) return;
+    const r = scheduleResults[t.id]; if (!r || !t.resource || r.isMilestone) return;
+    const alloc = parseFloat(t.allocation) || 100;
+    let d = new Date(r.start);
+    while (d <= r.end) {
+      if (isWorkingDay(d, holidaySetGlobal)) {
+        const key = t.resource.trim().toLowerCase();
+        if (!dayMap[key]) dayMap[key] = {};
+        const ds = d.toDateString(); dayMap[key][ds] = (dayMap[key][ds] || 0) + alloc;
+      }
+      d.setDate(d.getDate() + 1);
+    }
+  });
+  return dayMap;
+}
+function renderResources() {
+  const proj = currentProject();
+  const tbody = document.getElementById('resourceBody'); tbody.innerHTML = '';
+  const costSummary = document.getElementById('costSummary'); costSummary.innerHTML = '';
+  if (!proj) return;
+  const dayMap = computeResourceWorkload(proj);
+  let totalCost = 0;
+  proj.resources.forEach((res, idx) => {
+    const key = res.name.trim().toLowerCase();
+    const daysAssigned = proj.tasks.filter(t => !hasChildrenGlobal[t.id] && (t.resource || '').trim().toLowerCase() === key).reduce((sum, t) => sum + (parseFloat(t.duration) || 0), 0);
+    const cost = daysAssigned * (parseFloat(res.rate) || 0);
+    totalCost += cost;
+    const overDays = dayMap[key] ? Object.values(dayMap[key]).some(v => v > 100) : false;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" data-field="name" value="${escapeHtml(res.name)}" placeholder="Ej. Jessica Botello" style="min-width:170px;"></td>
+      <td class="col-med cost-col"><input type="number" min="0" data-field="rate" value="${res.rate ?? 0}" placeholder="Ej. 400000"></td>
+      <td class="col-med" style="font-size:12.5px;">${daysAssigned}</td>
+      <td class="col-med cost-col" style="font-size:12.5px;">${cost.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</td>
+      <td class="col-med"><span class="badge ${overDays ? 'badge-critical' : 'badge-ok'}">${overDays ? 'Sobrecargado' : 'Normal'}</span></td>
+      <td class="row-del">🗑</td>
+    `;
+    tr.querySelectorAll('input[data-field]').forEach(inp => {
+      const field = inp.dataset.field;
+      inp.addEventListener('input', () => {
+        if (field === 'name') {
+          const oldName = res.name;
+          const newName = inp.value;
+          if (oldName && oldName.trim() && oldName.trim().toLowerCase() !== newName.trim().toLowerCase()) {
+            const oldKey = oldName.trim().toLowerCase();
+            proj.tasks.forEach(tt => { if ((tt.resource || '').trim().toLowerCase() === oldKey) tt.resource = newName; });
+            proj.budget.roles.forEach(rr => { if ((rr.name || '').trim().toLowerCase() === oldKey) rr.name = newName; });
+          }
+        }
+        res[field] = inp.value; recalc(); renderAll_inner(); persistAll();
+      });
+    });
+    tr.querySelector('.row-del').addEventListener('click', () => {
+      const key = res.name.trim().toLowerCase();
+      const assignedCount = proj.tasks.filter(tt => (tt.resource || '').trim().toLowerCase() === key).length;
+      if (assignedCount > 0 && !confirm(`"${res.name}" está asignado a ${assignedCount} tarea(s). Si lo eliminas, esas tareas se quedan sin responsable (el nombre no se borra de las tareas, solo deja de existir como recurso registrado). ¿Continuar?`)) return;
+      proj.resources.splice(idx, 1); renderAll_inner(); persistAll();
+    });
+    tbody.appendChild(tr);
+  });
+  const phaseCount = proj.tasks.filter(t => hasChildrenGlobal[t.id]).length;
+  costSummary.innerHTML = `
+    <div class="cost-box cost-col"><div class="k">Costo total del proyecto</div><div class="v">${totalCost.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
+    <div class="cost-box"><div class="k">Tareas</div><div class="v">${proj.tasks.filter(t => !hasChildrenGlobal[t.id]).length}</div></div>
+    <div class="cost-box"><div class="k">Fases</div><div class="v">${phaseCount}</div></div>
+    <div class="cost-box"><div class="k">Recursos</div><div class="v">${proj.resources.length}</div></div>
+  `;
+}
+function renderProgressSummary() {
+  const proj = currentProject();
+  const box = document.getElementById('progressSummary');
+  if (!proj) { box.innerHTML = ''; return; }
+  const progressTasks = proj.tasks.filter(t => !hasChildrenGlobal[t.id] && scheduleResults[t.id] && !scheduleResults[t.id].isMilestone);
+  let sumWeight = 0, sumReal = 0, sumEsp = 0;
+  progressTasks.forEach(t => {
+    const w = parseFloat(t.duration) || 0.01;
+    sumWeight += w;
+    sumReal += w * (parseFloat(t.completado) || 0);
+    sumEsp += w * (computeExpectedProgress(scheduleResults[t.id]) || 0);
+  });
+  const avanceRealProy = sumWeight > 0 ? Math.round(sumReal / sumWeight) : 0;
+  const avanceEspProy = sumWeight > 0 ? Math.round(sumEsp / sumWeight) : 0;
+  const desvProy = avanceRealProy - avanceEspProy;
+  const desvColor = desvProy < -5 ? 'var(--red)' : (desvProy > 5 ? 'var(--green)' : 'var(--navy)');
+  box.innerHTML = `
+    <div class="cost-box"><div class="k">Avance real del proyecto</div><div class="v">${avanceRealProy}%</div></div>
+    <div class="cost-box"><div class="k">Avance esperado (hoy)</div><div class="v">${avanceEspProy}%</div></div>
+    <div class="cost-box"><div class="k">Desviación</div><div class="v" style="color:${desvColor};">${desvProy>0?'+':''}${desvProy}%</div></div>
+  `;
+}
+
+/* ============================================================
+   GANTT (SVG) + LÍNEA DE TIEMPO RESUMEN
+   ============================================================ */
+function getGanttDateRange(proj) {
+  const allDates = [];
+  proj.tasks.forEach(t => { const r = scheduleResults[t.id]; if (r) { allDates.push(r.start, r.end); } });
+  if (proj.baseline) Object.values(proj.baseline).forEach(b => { allDates.push(new Date(b.start), new Date(b.end)); });
+  if (allDates.length === 0) return null;
+  let minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+  let maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+  minDate.setDate(minDate.getDate() - 2); maxDate.setDate(maxDate.getDate() + 2);
+  return { minDate, maxDate };
+}
+function renderTimeline() {
+  const wrap = document.getElementById('timelineWrap'); const proj = currentProject(); wrap.innerHTML = '';
+  if (!proj || proj.tasks.length === 0) { wrap.innerHTML = '<div class="empty-state" style="padding:16px;">La línea de tiempo aparecerá aquí con tus fases principales.</div>'; return; }
+  const range = getGanttDateRange(proj);
+  if (!range) { wrap.innerHTML = '<div class="empty-state" style="padding:16px;">Agrega duración a tus tareas para ver la línea de tiempo.</div>'; return; }
+  const { minDate, maxDate } = range;
+  const totalDays = Math.round((maxDate - minDate) / 86400000) + 1;
+  const topPhases = flatOrder(proj).filter(o => o.depth === 0 && hasChildrenGlobal[o.task.id]).map(o => o.task);
+  const colors = ['#1B2A4A', '#F3901E', '#2E4270', '#9C5A0E', '#3E9B6F', '#8A8F98'];
+
+  if (topPhases.length === 0) {
+    const w = 900, h = 60;
+    wrap.innerHTML = `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" font-family="Poppins,sans-serif"><text x="10" y="${h/2+4}" font-size="12" fill="#8A8F98">Agrupa tus tareas en fases para ver el resumen aquí.</text></svg>`;
+    return;
+  }
+
+  const leftLabelWidth = 200, chartAreaWidth = 820, rightMargin = 55, headerHeight = 22, rowHeight = 42;
+  const dayW = chartAreaWidth / totalDays;
+  const width = leftLabelWidth + chartAreaWidth + rightMargin;
+  const height = headerHeight + topPhases.length * rowHeight + 6;
+
+  let svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" font-family="Poppins,sans-serif">`;
+  // Marcas de mes arriba
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(minDate); d.setDate(d.getDate() + i);
+    if (d.getDate() === 1 || i === 0) {
+      const x = leftLabelWidth + i * dayW;
+      svg += `<line x1="${x}" y1="${headerHeight}" x2="${x}" y2="${height}" stroke="#F2F3F5" stroke-width="1"/>`;
+      svg += `<text x="${x+3}" y="14" font-size="10" fill="#8A8F98">${d.toLocaleDateString('es-CO',{month:'short',year:'2-digit'})}</text>`;
+    }
+  }
+  svg += `<line x1="${leftLabelWidth}" y1="${headerHeight}" x2="${leftLabelWidth}" y2="${height}" stroke="#8A8F98" stroke-width="1"/>`;
+
+  topPhases.forEach((t, idx) => {
+    const r = scheduleResults[t.id]; if (!r) return;
+    const y = headerHeight + idx * rowHeight;
+    const x = leftLabelWidth + Math.round((r.start - minDate) / 86400000) * dayW;
+    const w = Math.max(6, (Math.round((r.end - r.start) / 86400000) + 1) * dayW);
+    const color = colors[idx % colors.length];
+    const pp = computePhaseProgress(proj, t.id);
+
+    svg += `<text x="8" y="${y + 16}" font-size="12" fill="#383939" font-weight="700">${escapeHtml((t.name||'(sin nombre)').slice(0,28))}</text>`;
+    svg += `<text x="8" y="${y + 30}" font-size="9.5" fill="#8A8F98">${r.start.toLocaleDateString('es-CO',{day:'2-digit',month:'short'})} – ${r.end.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'})}</text>`;
+
+    svg += `<rect x="${x}" y="${y+9}" width="${w}" height="20" rx="6" fill="${color}" opacity="0.22"/>`;
+    if (pp) {
+      const fillW = w * Math.min(pp.real,100)/100;
+      svg += `<rect x="${x}" y="${y+9}" width="${fillW}" height="20" rx="6" fill="${color}"/>`;
+      const desv = pp.real - pp.esperado;
+      const desvColor = desv < -5 ? '#D6455A' : (desv > 5 ? '#3E9B6F' : '#8A8F98');
+      svg += `<text x="${x+w+8}" y="${y+23}" font-size="10.5" fill="${color}" font-weight="700">${pp.real}%</text>`;
+      svg += `<text x="${x+w+8}" y="${y+35}" font-size="9" fill="${desvColor}">${desv>0?'+':''}${desv}% vs. plan</text>`;
+    } else {
+      svg += `<rect x="${x}" y="${y+9}" width="${w}" height="20" rx="6" fill="${color}"/>`;
+    }
+  });
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (today >= minDate && today <= maxDate) {
+    const xToday = leftLabelWidth + Math.round((today - minDate) / 86400000) * dayW;
+    svg += `<line x1="${xToday}" y1="${headerHeight}" x2="${xToday}" y2="${height}" stroke="#D6455A" stroke-width="1.5" stroke-dasharray="3,3"/>`;
+    svg += `<text x="${xToday+3}" y="${headerHeight-4}" font-size="9.5" fill="#D6455A" font-weight="600">Hoy</text>`;
+  }
+  svg += `</svg>`;
+  wrap.innerHTML = svg;
+}
+function renderGantt() {
+  const wrap = document.getElementById('ganttWrap'); const proj = currentProject(); wrap.innerHTML = '';
+  if (!proj || proj.tasks.length === 0) { wrap.innerHTML = '<div class="empty-state"><div class="big">📊</div>El Gantt aparecerá aquí cuando agregues tareas con duración.</div>'; return; }
+  const range = getGanttDateRange(proj);
+  if (!range) { wrap.innerHTML = '<div class="empty-state">Agrega una duración en días-persona a tus tareas para ver el Gantt.</div>'; return; }
+  const { minDate, maxDate } = range;
+  const totalDays = Math.round((maxDate - minDate) / 86400000) + 1;
+  const dayWidth = 24, rowHeight = 28, leftLabelWidth = 300, headerHeight = 42;
+  const order = flatOrder(proj).filter(o => scheduleResults[o.task.id]);
+  const chartWidth = leftLabelWidth + totalDays * dayWidth + 50;
+  const chartHeight = headerHeight + order.length * rowHeight + 10;
+
+  let svg = `<svg width="${chartWidth}" height="${chartHeight}" xmlns="http://www.w3.org/2000/svg" font-family="Poppins,sans-serif">`;
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(minDate); d.setDate(d.getDate() + i);
+    const x = leftLabelWidth + i * dayWidth;
+    if (!isWorkingDay(d, holidaySetGlobal)) svg += `<rect x="${x}" y="${headerHeight}" width="${dayWidth}" height="${chartHeight-headerHeight}" fill="#EDEEF1"/>`;
+    if (d.getDate() === 1 || i === 0) svg += `<text x="${x+3}" y="16" font-size="10" fill="#8A8F98">${d.toLocaleDateString('es-CO',{month:'short',year:'2-digit'})}</text>`;
+    if (d.getDay() === 1) { svg += `<line x1="${x}" y1="${headerHeight-16}" x2="${x}" y2="${chartHeight}" stroke="#E1E3E8" stroke-width="1"/>`; svg += `<text x="${x+3}" y="34" font-size="9.5" fill="#8A8F98">${d.getDate()}</text>`; }
+  }
+  svg += `<line x1="${leftLabelWidth}" y1="0" x2="${leftLabelWidth}" y2="${chartHeight}" stroke="#8A8F98" stroke-width="1"/>`;
+
+  order.forEach(({ task: t, depth }, idx) => {
+    const y = headerHeight + idx * rowHeight;
+    const r = scheduleResults[t.id];
+    const isPhase = !!hasChildrenGlobal[t.id];
+    const wbs = wbsMapGlobal[t.id] || '';
+    const fullLabel = `${wbs}  ${(t.name || '(sin nombre)')}`;
+    const label = fullLabel.length > 40 ? fullLabel.slice(0, 39) + '…' : fullLabel;
+    svg += `<text x="${8+depth*10}" y="${y + rowHeight/2 + 4}" font-size="11.5" fill="#383939" font-weight="${isPhase?700:400}">${escapeHtml(label)}<title>${escapeHtml(fullLabel)}</title></text>`;
+    if (proj.baseline && proj.baseline[t.id]) {
+      const b = proj.baseline[t.id]; const bStart = new Date(b.start), bEnd = new Date(b.end);
+      const bx = leftLabelWidth + Math.round((bStart-minDate)/86400000) * dayWidth;
+      const bw = Math.max(2,(Math.round((bEnd-bStart)/86400000)+1) * dayWidth);
+      svg += `<rect x="${bx}" y="${y+4}" width="${bw}" height="7" rx="3" fill="#8A8F98" opacity="0.45"/>`;
+    }
+    const sx = leftLabelWidth + Math.round((r.start-minDate)/86400000) * dayWidth;
+    if (r.isMilestone) {
+      const cx = sx, cy = y + rowHeight/2;
+      svg += `<rect x="${cx-6}" y="${cy-6}" width="12" height="12" fill="#F3901E" transform="rotate(45 ${cx} ${cy})"/>`;
+    } else if (isPhase) {
+      const sw = Math.max(2,(Math.round((r.end-r.start)/86400000)+1) * dayWidth);
+      const y2 = y + 12;
+      svg += `<path d="M ${sx} ${y2} L ${sx+sw} ${y2} L ${sx+sw} ${y2+8} L ${sx+sw-5} ${y2} M ${sx} ${y2} L ${sx} ${y2+8} L ${sx+5} ${y2}" fill="none" stroke="#12203B" stroke-width="4" stroke-linecap="round"/>`;
+    } else {
+      const sw = Math.max(2,(Math.round((r.end-r.start)/86400000)+1) * dayWidth);
+      const color = r.critical ? '#F3901E' : '#1B2A4A';
+      svg += `<rect x="${sx}" y="${y+9}" width="${sw}" height="11" rx="4" fill="${color}"/>`;
+      const completado = parseFloat(t.completado) || 0;
+      if (completado > 0) svg += `<rect x="${sx}" y="${y+9}" width="${sw * Math.min(completado,100)/100}" height="11" rx="4" fill="#00000030"/>`;
+      if (sw > 20) svg += `<text x="${sx + sw + 4}" y="${y + rowHeight/2 + 4}" font-size="10" fill="${completado>=100?'#3E9B6F':'#8A8F98'}">${completado}%</text>`;
+    }
+  });
+  svg += `</svg>`;
+  wrap.innerHTML = svg;
+}
+
+/* ============================================================
+   ALERTAS
+   ============================================================ */
+function renderAlerts() {
+  const proj = currentProject();
+  const critEl = document.getElementById('alertsCritical'), riskEl = document.getElementById('alertsRisk'), resEl = document.getElementById('alertsResource');
+  critEl.innerHTML = ''; riskEl.innerHTML = ''; resEl.innerHTML = '';
+  if (!proj || proj.tasks.length === 0) { critEl.innerHTML = riskEl.innerHTML = resEl.innerHTML = '<div class="alert-empty">Sin datos aún.</div>'; return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const leaves = proj.tasks.filter(t => !hasChildrenGlobal[t.id]);
+
+  const criticalTasks = leaves.filter(t => scheduleResults[t.id] && scheduleResults[t.id].critical && !scheduleResults[t.id].isMilestone);
+  if (criticalTasks.length === 0) critEl.innerHTML = '<div class="alert-empty">No hay tareas en ruta crítica todavía.</div>';
+  else criticalTasks.forEach(t => { const r = scheduleResults[t.id]; critEl.innerHTML += `<div class="alert-item alert-crit"><b>${escapeHtml(t.name||'(sin nombre)')}</b><br>Sin holgura — termina ${r.end.toLocaleDateString('es-CO',{day:'2-digit',month:'short'})}</div>`; });
+
+  let riskCount = 0;
+  leaves.forEach(t => {
+    const r = scheduleResults[t.id]; if (!r) return;
+    const completado = parseFloat(t.completado) || 0;
+    if (!r.isMilestone && r.end < today && completado < 100) {
+      riskCount++; const dias = Math.round((today - r.end) / 86400000);
+      riskEl.innerHTML += `<div class="alert-item alert-risk"><b>${escapeHtml(t.name||'(sin nombre)')}</b><br>Vencida hace ${dias} día(s), ${completado}% completado</div>`;
+    } else if (proj.baseline && proj.baseline[t.id]) {
+      const baseEnd = new Date(proj.baseline[t.id].end);
+      if (r.end > baseEnd) { riskCount++; const diasVar = Math.round((r.end - baseEnd) / 86400000); riskEl.innerHTML += `<div class="alert-item alert-risk"><b>${escapeHtml(t.name||'(sin nombre)')}</b><br>${diasVar} día(s) de atraso vs. línea base</div>`; }
+    }
+  });
+  if (riskCount === 0) riskEl.innerHTML = '<div class="alert-empty">Ninguna tarea atrasada respecto al plan.</div>';
+
+  const dayMap = computeResourceWorkload(proj);
+  let resCount = 0;
+  Object.entries(dayMap).forEach(([resource, days]) => {
+    const overDays = Object.entries(days).filter(([, total]) => total > 100).map(([ds]) => new Date(ds)).sort((a,b)=>a-b);
+    if (overDays.length === 0) return;
+    const ranges = []; let rs = overDays[0], re = overDays[0];
+    for (let i = 1; i < overDays.length; i++) { const diff = (overDays[i]-re)/86400000; if (diff<=3) re=overDays[i]; else { ranges.push([rs,re]); rs=overDays[i]; re=overDays[i]; } }
+    ranges.push([rs,re]);
+    ranges.forEach(([s,e]) => { resCount++; const label = s.getTime()===e.getTime() ? s.toLocaleDateString('es-CO',{day:'2-digit',month:'short'}) : `${s.toLocaleDateString('es-CO',{day:'2-digit',month:'short'})} – ${e.toLocaleDateString('es-CO',{day:'2-digit',month:'short'})}`; resEl.innerHTML += `<div class="alert-item alert-res"><b>${escapeHtml(resource)}</b><br>Asignado &gt;100% del ${label}</div>`; });
+  });
+  if (resCount === 0) resEl.innerHTML = '<div class="alert-empty">Ningún responsable está sobreasignado.</div>';
+}
+
+/* ============================================================
+   EXPORTAR PDF
+   ============================================================ */
+function openExportModal() { const proj = currentProject(); if (!proj) return; document.getElementById('expFecha').value = new Date().toISOString().slice(0,10); document.getElementById('expIncludeCosts').checked = !proj.clientMode; document.getElementById('exportModal').classList.add('open'); }
+function closeExportModal() { document.getElementById('exportModal').classList.remove('open'); const p = document.getElementById('exportProgress'); p.classList.remove('show'); p.textContent = 'Generando PDF...'; }
+async function doExport() {
+  const proj = currentProject(); if (!proj) return;
+  const cliente = document.getElementById('expCliente').value || '(Cliente)';
+  const integrador = document.getElementById('expIntegrador').value;
+  const preparadoPor = document.getElementById('expPreparadoPor').value || 'Imagine CX';
+  const fechaVal = document.getElementById('expFecha').value;
+  const fecha = fechaVal ? new Date(fechaVal + 'T00:00:00') : new Date();
+  const progress = document.getElementById('exportProgress'); progress.classList.add('show'); progress.textContent = 'Preparando documento...';
+
+  const ganttHtml = document.getElementById('ganttWrap').innerHTML;
+  const leaves = proj.tasks.filter(t => !hasChildrenGlobal[t.id] && scheduleResults[t.id]);
+  const rows = leaves.map(t => {
+    const r = scheduleResults[t.id];
+    const estado = r.isMilestone ? 'Hito' : (r.critical ? 'Ruta crítica' : 'Programada');
+    return `<tr><td>${escapeHtml(wbsMapGlobal[t.id]||'')} ${escapeHtml(t.name||'—')}</td><td>${escapeHtml(t.resource||'—')}</td><td>${r.start.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'})}</td><td>${r.end.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'})}</td><td>${estado}</td></tr>`;
+  }).join('');
+  const totalCost = proj.resources.reduce((sum,res) => {
+    const key = res.name.trim().toLowerCase();
+    const days = leaves.filter(t => (t.resource||'').trim().toLowerCase()===key).reduce((s,t)=>s+(parseFloat(t.duration)||0),0);
+    return sum + days*(parseFloat(res.rate)||0);
+  }, 0);
+  const resRows = proj.resources.map(res => {
+    const key = res.name.trim().toLowerCase();
+    const days = leaves.filter(t => (t.resource||'').trim().toLowerCase()===key).reduce((s,t)=>s+(parseFloat(t.duration)||0),0);
+    const cost = days*(parseFloat(res.rate)||0);
+    return `<tr><td>${escapeHtml(res.name)}</td><td>${(parseFloat(res.rate)||0).toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td><td>${days}</td><td>${cost.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td></tr>`;
+  }).join('');
+
+  const includeCosts = document.getElementById('expIncludeCosts').checked;
+  const printRoot = document.getElementById('printRoot');
+  printRoot.innerHTML = `
+    <div class="pp-page pp-cover">
+      <div class="tag">Propuesta comercial · Cronograma de proyecto</div>
+      <h1>${escapeHtml(proj.name)}</h1>
+      <div class="sub">${integrador ? 'En alianza con ' + escapeHtml(integrador) : ''}</div>
+      <div class="meta-row">
+        <div class="meta-item"><div class="k">Cliente</div><div class="v">${escapeHtml(cliente)}</div></div>
+        <div class="meta-item"><div class="k">Preparado por</div><div class="v">${escapeHtml(preparadoPor)}</div></div>
+        <div class="meta-item"><div class="k">Fecha</div><div class="v">${fecha.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})}</div></div>
+      </div>
+      <div class="footer-tag">It is all about people!</div>
+    </div>
+    <div class="pp-page">
+      <div class="pp-header"><div class="brand">Imagine CX</div><div class="doc-title">Cronograma general — ${escapeHtml(proj.name)}</div><div class="page-meta">Página 2</div></div>
+      <div>${ganttHtml}</div>
+    </div>
+    <div class="pp-page">
+      <div class="pp-header"><div class="brand">Imagine CX</div><div class="doc-title">Detalle de fases y tareas</div><div class="page-meta">Página 3</div></div>
+      <table class="pp-table"><thead><tr><th>Fase / Tarea</th><th>Responsable</th><th>Inicio</th><th>Fin</th><th>Estado</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="pp-footer-tag"><b>Imagine CX</b> — It is all about people!</div>
+    </div>
+    ${includeCosts ? `<div class="pp-page">
+      <div class="pp-header"><div class="brand">Imagine CX</div><div class="doc-title">Recursos y costos</div><div class="page-meta">Página 4</div></div>
+      <table class="pp-table"><thead><tr><th>Recurso</th><th>Tarifa / día</th><th>Días asignados</th><th>Costo</th></tr></thead><tbody>${resRows}</tbody></table>
+      <p style="margin-top:18px; font-size:15px; font-weight:700; color:var(--navy);">Costo total estimado: ${totalCost.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</p>
+      <div class="pp-footer-tag"><b>Imagine CX</b> — It is all about people!</div>
+    </div>` : ''}
+  `;
+  try {
+    const pages = printRoot.querySelectorAll('.pp-page');
+    const pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
+    for (let i = 0; i < pages.length; i++) {
+      progress.textContent = `Generando página ${i + 1} de ${pages.length}...`;
+      const canvas = await html2canvas(pages[i], { scale: 2, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+      const pageWidth = pdf.internal.pageSize.getWidth(), pageHeight = pdf.internal.pageSize.getHeight();
+      const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
+      const w = canvas.width * ratio, h = canvas.height * ratio;
+      if (i > 0) pdf.addPage();
+      pdf.addImage(imgData, 'PNG', (pageWidth - w) / 2, (pageHeight - h) / 2, w, h);
+    }
+    pdf.save(`Cronograma_${(proj.name || 'proyecto').replace(/[^a-zA-Z0-9]+/g, '_')}.pdf`);
+    progress.textContent = 'PDF generado correctamente.'; setTimeout(closeExportModal, 1200);
+  } catch (e) { console.error(e); progress.textContent = 'Ocurrió un error generando el PDF.'; }
+}
+
+/* ============================================================
+   EXPORTAR A MS PROJECT (MSPDI XML)
+   MPXJ (la misma librería usada para leer los .mpp) confirma que
+   escribir un binario .mpp nativo no es viable de forma confiable;
+   recomienda usar MSPDI, el formato XML que Project abre de forma
+   nativa y que luego se puede guardar como .mpp con un clic.
+   ============================================================ */
+function isoDateTime(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+function escapeXml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;'); }
+
+/* ============================================================
+   SCRIPT DE CONVERSIÓN A .MPP REAL (usa MS Project local vía COM)
+   Escribir un .mpp binario nativo desde el navegador no es viable
+   (ni siquiera MPXJ, la librería que lee los .mpp de Coopenae, lo
+   soporta). La única forma confiable de generar un .mpp real es
+   dejar que el propio MS Project lo escriba — este script automatiza
+   ese paso usando tu instalación local, para no tener que abrir y
+   guardar cada archivo a mano.
+   ============================================================ */
+const MPP_CONVERTER_SCRIPT = `<#
+Convertir_a_MPP.ps1
+--------------------
+Convierte uno o varios archivos .xml (formato MSPDI, exportados desde
+"Cronogramas ICX") a archivos .mpp reales, usando tu instalación local
+de Microsoft Project mediante automatización COM.
+
+REQUISITOS:
+- Microsoft Project de escritorio instalado en este computador (no la versión web).
+- Windows con PowerShell (no funciona en Mac/Linux, porque Project no corre ahí).
+
+USO:
+  Un solo archivo:
+    .\\Convertir_a_MPP.ps1 -Ruta "C:\\ruta\\Cronograma_Coopenae.xml"
+
+  Todos los .xml de una carpeta:
+    .\\Convertir_a_MPP.ps1 -Ruta "C:\\ruta\\carpeta_con_xmls"
+
+El .mpp queda guardado al lado del .xml original, con el mismo nombre.
+#>
+
+param(
+    [Parameter(Mandatory = $true)]
+    [string]$Ruta
+)
+
+function Convert-OneFile {
+    param([string]$XmlFullPath, $ProjectApp)
+
+    $MppPath = [System.IO.Path]::ChangeExtension($XmlFullPath, "mpp")
+    Write-Host "Procesando: $XmlFullPath"
+
+    try {
+        $ProjectApp.FileOpen($XmlFullPath)
+        Start-Sleep -Milliseconds 500
+
+        # Guardar como .mpp (Project infiere el formato binario nativo por la extensión .mpp)
+        $ProjectApp.FileSaveAs($MppPath)
+        Start-Sleep -Milliseconds 500
+
+        # Cerrar el proyecto activo sin volver a preguntar (ya se guardó)
+        $ProjectApp.FileCloseEx(0)
+
+        Write-Host "  -> Generado: $MppPath" -ForegroundColor Green
+        return $true
+    } catch {
+        Write-Host "  -> ERROR con este archivo: $($_.Exception.Message)" -ForegroundColor Red
+        return $false
+    }
+}
+
+if (-not (Test-Path $Ruta)) {
+    Write-Error "No se encontro la ruta: $Ruta"
+    exit 1
+}
+
+Write-Host "Abriendo Microsoft Project (puede tardar unos segundos)..."
+$project = New-Object -ComObject MSProject.Application
+$project.Visible = $false
+$project.DisplayAlerts = $false
+
+$ok = 0; $fail = 0
+
+try {
+    if ((Get-Item $Ruta) -is [System.IO.DirectoryInfo]) {
+        $archivos = Get-ChildItem -Path $Ruta -Filter *.xml
+        if ($archivos.Count -eq 0) {
+            Write-Host "No se encontraron archivos .xml en esa carpeta."
+        }
+        foreach ($f in $archivos) {
+            if (Convert-OneFile -XmlFullPath $f.FullName -ProjectApp $project) { $ok++ } else { $fail++ }
+        }
+    } else {
+        if (Convert-OneFile -XmlFullPath (Resolve-Path $Ruta).Path -ProjectApp $project) { $ok++ } else { $fail++ }
+    }
+} finally {
+    $project.Quit()
+    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($project) | Out-Null
+    [System.GC]::Collect()
+}
+
+Write-Host ""
+Write-Host "Listo. Convertidos correctamente: $ok | Con error: $fail" -ForegroundColor Cyan
+Write-Host "Si algun archivo dio error, revisa que Project pueda abrirlo manualmente primero (Archivo > Abrir)."
+`;
+function downloadMppScript() {
+  const blob = new Blob([MPP_CONVERTER_SCRIPT], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'Convertir_a_MPP.ps1';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  alert('Script descargado. Requiere Windows con MS Project de escritorio instalado. Uso:\n\n.\\Convertir_a_MPP.ps1 -Ruta "C:\\ruta\\tu_archivo.xml"\n\nTambién puedes darle la ruta de una carpeta completa para convertir varios .xml de una vez.');
+}
+
+function exportMSPDI() {
+  const proj = currentProject(); if (!proj) return;
+  const hoursPerDay = proj.hoursPerDay || 8;
+  const order = flatOrder(proj).filter(o => scheduleResults[o.task.id]);
+  if (order.length === 0) { alert('Agrega tareas con fechas calculadas antes de exportar.'); return; }
+
+  const uidMap = {}; order.forEach((o, idx) => { uidMap[o.task.id] = idx + 1; });
+  const resUidMap = {}; proj.resources.forEach((r, idx) => { resUidMap[r.name.trim().toLowerCase()] = idx + 1; });
+
+  const startDate = new Date(proj.start + 'T00:00:00');
+  const startYear = startDate.getFullYear();
+  // Usar exactamente los festivos configurados en este proyecto (toggle colombiano + festivos propios),
+  // no una lista recalculada aparte — así lo que se exporta coincide con lo que se ve en la herramienta.
+  const holidaySet2 = new Set(holidaySetGlobal);
+  const holidayDates = Array.from(holidaySet2).map(ds => new Date(ds));
+
+  let xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Project xmlns="http://schemas.microsoft.com/project">\n`;
+  xml += `<Name>${escapeXml(proj.name)}</Name><Title>${escapeXml(proj.name)}</Title><CalendarUID>1</CalendarUID>\n`;
+  xml += `<Calendars><Calendar><UID>1</UID><Name>Estandar CO</Name><IsBaseCalendar>1</IsBaseCalendar><WeekDays>`;
+  for (let d = 1; d <= 7; d++) {
+    const working = d !== 1 && d !== 7;
+    xml += `<WeekDay><DayType>${d}</DayType><DayWorking>${working ? 1 : 0}</DayWorking>`;
+    if (working) xml += `<WorkingTimes><WorkingTime><FromTime>08:00:00</FromTime><ToTime>12:00:00</ToTime></WorkingTime><WorkingTime><FromTime>13:00:00</FromTime><ToTime>17:00:00</ToTime></WorkingTime></WorkingTimes>`;
+    xml += `</WeekDay>`;
+  }
+  xml += `</WeekDays><Exceptions>`;
+  holidayDates.forEach(h => { const ds = h.toISOString().slice(0,10); xml += `<Exception><Name>Festivo</Name><TimePeriod><FromDate>${ds}T00:00:00</FromDate><ToDate>${ds}T00:00:00</ToDate></TimePeriod><DayWorking>0</DayWorking></Exception>`; });
+  xml += `</Exceptions></Calendar></Calendars>\n`;
+
+  xml += `<Resources>`;
+  proj.resources.forEach((r, idx) => {
+    const cleanName = escapeXml((r.name || '').replace(/[\[\],]/g, ''));
+    xml += `<Resource><UID>${idx+1}</UID><ID>${idx+1}</ID><Name>${cleanName}</Name><StandardRate>${((parseFloat(r.rate)||0)/hoursPerDay).toFixed(2)}/h</StandardRate></Resource>`;
+  });
+  xml += `</Resources>\n<Tasks>`;
+  order.forEach(({ task: t, depth }) => {
+    const isPhase = !!hasChildrenGlobal[t.id];
+    const r = scheduleResults[t.id];
+    const uid = uidMap[t.id];
+    const wbs = wbsMapGlobal[t.id] || '';
+    xml += `<Task><UID>${uid}</UID><ID>${uid}</ID><Name>${escapeXml(t.name || '(sin nombre)')}</Name><OutlineLevel>${depth+1}</OutlineLevel><OutlineNumber>${wbs}</OutlineNumber>`;
+    xml += `<Start>${isoDateTime(r.start)}</Start><Finish>${isoDateTime(r.end)}</Finish>`;
+    if (!isPhase) xml += `<ConstraintType>2</ConstraintType><ConstraintDate>${isoDateTime(r.start)}</ConstraintDate>`;
+    if (isPhase) { xml += `<Summary>1</Summary>`; }
+    else if (r.isMilestone) { xml += `<Milestone>1</Milestone><Duration>PT0H0M0S</Duration>`; }
+    else {
+      const effDays = r.effectiveDays || 1;
+      const workHours = (parseFloat(t.duration) || 0) * hoursPerDay;
+      xml += `<Duration>PT${effDays*hoursPerDay}H0M0S</Duration><Work>PT${workHours}H0M0S</Work><PercentComplete>${parseInt(t.completado)||0}</PercentComplete>`;
+    }
+    if (!isPhase) {
+      parsePredText(t.predText).forEach(p => {
+        const predId = wbsMapGlobal && Object.keys(wbsMapGlobal).find(id => wbsMapGlobal[id] === p.wbs);
+        if (predId && uidMap[predId]) {
+          const typeCode = { FF:0, FS:1, SF:2, SS:3 }[p.type] ?? 1;
+          xml += `<PredecessorLink><PredecessorUID>${uidMap[predId]}</PredecessorUID><Type>${typeCode}</Type></PredecessorLink>`;
+        }
+      });
+    }
+    xml += `</Task>`;
+  });
+  xml += `</Tasks>\n<Assignments>`;
+  let aUid = 1;
+  order.forEach(({ task: t }) => {
+    if (hasChildrenGlobal[t.id]) return;
+    const resKey = (t.resource || '').trim().toLowerCase();
+    const resUid = resUidMap[resKey];
+    if (resUid) {
+      const alloc = (parseFloat(t.allocation) || 100) / 100;
+      const workHours = (parseFloat(t.duration) || 0) * hoursPerDay;
+      xml += `<Assignment><UID>${aUid++}</UID><TaskUID>${uidMap[t.id]}</TaskUID><ResourceUID>${resUid}</ResourceUID><Units>${alloc}</Units><Work>PT${workHours}H0M0S</Work></Assignment>`;
+    }
+  });
+  xml += `</Assignments>\n</Project>`;
+
+  const blob = new Blob([xml], { type: 'application/xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `Cronograma_${(proj.name||'proyecto').replace(/[^a-zA-Z0-9]+/g,'_')}_MSProject.xml`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ============================================================
+   CALENDARIO Y FESTIVOS (UI)
+   ============================================================ */
+function renderCalendarSection() {
+  const proj = currentProject();
+  const chk = document.getElementById('chkColombianHolidays');
+  const list = document.getElementById('customHolidaysList');
+  const hoursInput = document.getElementById('hoursPerDayInput');
+  if (!proj) { list.innerHTML = ''; return; }
+  chk.checked = proj.includeColombianHolidays !== false;
+  hoursInput.value = proj.hoursPerDay || 8;
+  list.innerHTML = '';
+  (proj.customHolidays || []).forEach((ds, idx) => {
+    const d = new Date(ds + 'T00:00:00');
+    const chip = document.createElement('span');
+    chip.className = 'badge badge-phase';
+    chip.style.cursor = 'pointer';
+    chip.title = 'Clic para quitar';
+    chip.textContent = d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ✕';
+    chip.addEventListener('click', () => { proj.customHolidays.splice(idx, 1); recalc(); renderAll_inner(); persistAll(); });
+    list.appendChild(chip);
+  });
+  if ((proj.customHolidays || []).length === 0) list.innerHTML = '<span class="alert-empty">Sin festivos adicionales configurados.</span>';
+}
+
+/* ============================================================
+   EXPORTAR / IMPORTAR JSON
+   ============================================================ */
+function exportJSON() {
+  const proj = currentProject(); if (!proj) return;
+  const blob = new Blob([JSON.stringify(proj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `Cronograma_${(proj.name || 'proyecto').replace(/[^a-zA-Z0-9]+/g, '_')}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function importJSONFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const raw = JSON.parse(reader.result);
+      const p = normalizeProject(raw);
+      p.id = uid(); // evitar colisión con proyectos existentes
+      state.projects.push(p); state.currentId = p.id;
+      renderAll(); persistAll();
+      saveIndicator('Proyecto importado');
+    } catch (e) { console.error(e); alert('No se pudo leer el archivo JSON. Verifica que sea un export válido de esta herramienta.'); }
+  };
+  reader.readAsText(file);
+}
+
+/* ============================================================
+   IMPORTAR DESDE MS PROJECT (MSPDI XML)
+   ============================================================ */
+function importMSPDIFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const xmlText = reader.result;
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(xmlText, 'application/xml');
+      if (xml.querySelector('parsererror')) throw new Error('XML inválido');
+      const NS = 'http://schemas.microsoft.com/project';
+      const getTag = (parent, tag) => { const els = parent.getElementsByTagNameNS(NS, tag); return els.length ? els : parent.getElementsByTagName(tag); };
+      const textOf = (parent, tag) => { const els = getTag(parent, tag); return els.length ? els[0].textContent : null; };
+
+      const projectRoot = xml.documentElement;
+      const directChild = (tag) => { for (const c of projectRoot.childNodes) { if (c.nodeType === 1 && (c.localName === tag || c.tagName === tag)) return c.textContent; } return null; };
+      const projectName = directChild('Title') || directChild('Name') || 'Proyecto importado';
+      const minutesPerDayStr = directChild('MinutesPerDay');
+      const importedHoursPerDay = minutesPerDayStr ? (parseFloat(minutesPerDayStr) / 60) : 8;
+      const taskEls = Array.from(getTag(xml, 'Task'));
+      const resourceEls = Array.from(getTag(xml, 'Resource'));
+      const assignmentEls = Array.from(getTag(xml, 'Assignment'));
+
+      // Festivos / calendario: leer las Exceptions del Calendar del archivo y respetarlas tal cual
+      function expandDateRange(fromStr, toStr) {
+        const dates = [];
+        let d = new Date(fromStr.slice(0, 10) + 'T00:00:00');
+        const end = new Date((toStr || fromStr).slice(0, 10) + 'T00:00:00');
+        let guard = 0;
+        while (d <= end && guard < 366) { dates.push(d.toISOString().slice(0, 10)); d = new Date(d.getTime() + 86400000); guard++; }
+        return dates;
+      }
+      const calendarEls = Array.from(getTag(xml, 'Calendar'));
+      const importedHolidaySet = new Set();
+      calendarEls.forEach(calEl => {
+        Array.from(getTag(calEl, 'Exception')).forEach(exEl => {
+          const dayWorking = textOf(exEl, 'DayWorking');
+          if (dayWorking === '1') return; // excepción que vuelve laborable un día puntual; no es un festivo
+          const tpEls = getTag(exEl, 'TimePeriod');
+          if (!tpEls.length) return;
+          const fromDate = textOf(tpEls[0], 'FromDate'); const toDate = textOf(tpEls[0], 'ToDate');
+          if (!fromDate) return;
+          expandDateRange(fromDate, toDate).forEach(ds => importedHolidaySet.add(ds));
+        });
+      });
+      const importedHolidays = Array.from(importedHolidaySet).sort();
+
+      // Recursos
+      const resources = [];
+      const resUidToName = {};
+      resourceEls.forEach(rEl => {
+        const uidV = textOf(rEl, 'UID');
+        const name = textOf(rEl, 'Name') || ('Recurso ' + uidV);
+        let rateStr = textOf(rEl, 'StandardRate') || '0';
+        const rateNum = parseFloat(rateStr) || 0;
+        const rate = rateNum * importedHoursPerDay; // convertir de /hora a /dia
+        resources.push({ name, rate });
+        resUidToName[uidV] = name;
+      });
+
+      // Asignaciones: TaskUID -> {resource, units, workHours}
+      const taskAssignment = {};
+      assignmentEls.forEach(aEl => {
+        const taskUid = textOf(aEl, 'TaskUID');
+        const resUid = textOf(aEl, 'ResourceUID');
+        const units = parseFloat(textOf(aEl, 'Units') || '1');
+        const workStr = textOf(aEl, 'Work');
+        taskAssignment[taskUid] = { resource: resUidToName[resUid] || '', units: units * 100, workStr };
+      });
+
+      function parseISODuration(s) {
+        if (!s) return 0;
+        const m = s.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/i);
+        if (!m) return 0;
+        const h = parseFloat(m[1] || 0), mi = parseFloat(m[2] || 0);
+        return h + mi / 60;
+      }
+
+      // Construir jerarquía por OutlineLevel
+      const rawTasks = taskEls.map(tEl => {
+        const uidV = textOf(tEl, 'UID');
+        const name = textOf(tEl, 'Name') || '';
+        const level = parseInt(textOf(tEl, 'OutlineLevel') || '1', 10);
+        const isMilestone = textOf(tEl, 'Milestone') === '1';
+        const isSummary = textOf(tEl, 'Summary') === '1';
+        const startStr = textOf(tEl, 'Start'); const finishStr = textOf(tEl, 'Finish');
+        const durationHours = parseISODuration(textOf(tEl, 'Duration'));
+        const workHours = parseISODuration(textOf(tEl, 'Work'));
+        const percentComplete = parseFloat(textOf(tEl, 'PercentComplete') || '0');
+        const predEls = Array.from(getTag(tEl, 'PredecessorLink'));
+        const preds = predEls.map(pEl => ({ predUid: textOf(pEl, 'PredecessorUID'), type: parseInt(textOf(pEl, 'Type') || '1', 10) }));
+        return { uidV, name, level, isMilestone, isSummary, startStr, finishStr, durationHours, workHours, percentComplete, preds };
+      });
+
+      if (rawTasks.length === 0) throw new Error('El archivo no contiene tareas reconocibles.');
+
+      const idMap = {}; // uidV -> nuestro id interno
+      const tasks = [];
+      const stackByLevel = {};
+      rawTasks.forEach(rt => {
+        const id = taskUid(); idMap[rt.uidV] = id;
+        const parentLevel = rt.level - 1;
+        const parentId = parentLevel >= 1 ? (stackByLevel[parentLevel] || null) : null;
+        stackByLevel[rt.level] = id;
+        const assign = taskAssignment[rt.uidV] || {};
+        const effWork = assign.workStr ? parseISODuration(assign.workStr) : (rt.workHours || rt.durationHours);
+        const durationDays = rt.isSummary ? '' : Math.round((effWork / importedHoursPerDay) * 100) / 100;
+        tasks.push(normalizeTask({
+          id, name: rt.name, parentId,
+          duration: rt.isMilestone ? 0 : durationDays,
+          allocation: assign.units || 100,
+          resource: assign.resource || '',
+          completado: rt.percentComplete,
+          isMilestone: rt.isMilestone,
+          _uidV: rt.uidV, _preds: rt.preds
+        }));
+      });
+
+      // Resolver predecesoras a texto WBS-estilo usando nuestra propia jerarquía
+      const { wbsMap, hasChildren: hasChildrenLookup } = computeWbsAndTree(tasks);
+      const typeNames = { 0: 'FF', 1: 'FS', 2: 'SF', 3: 'SS' };
+      tasks.forEach(t => {
+        const rt = rawTasks.find(r => idMap[r.uidV] === t.id);
+        if (rt && rt.preds.length) {
+          t.predText = rt.preds.map(p => {
+            const predId = idMap[p.predUid]; const wbs = wbsMap[predId];
+            if (!wbs) return null;
+            const typeName = typeNames[p.type] || 'FS';
+            return typeName === 'FS' ? wbs : `${wbs}${typeName}`;
+          }).filter(Boolean).join(',');
+        }
+        delete t._uidV; delete t._preds;
+      });
+
+      // Fijamos CADA tarea hoja a la fecha Y HORA exacta de inicio y fin que ya traía el
+      // archivo de Project (no solo la fecha), sin importar si tiene predecesoras o no.
+      // Así, al importar, absolutamente ninguna fecha que ya existía se recalcula ni se
+      // mueve — se respeta tal cual estaba, incluyendo medios días. Las predecesoras quedan
+      // igual registradas (se ven y se pueden editar), y si más adelante quitas la fecha
+      // fijada (📌) de una tarea puntual, esa sí empezará a recalcularse dinámicamente
+      // según sus predecesoras.
+      tasks.forEach(t => {
+        const isLeaf = !hasChildrenLookup[t.id];
+        if (!isLeaf) return;
+        const rt = rawTasks.find(r => idMap[r.uidV] === t.id);
+        if (rt && rt.startStr) {
+          t.manualStart = rt.startStr.slice(0, 10);
+          t.manualStartDateTime = rt.startStr;
+          if (rt.finishStr && !t.isMilestone) t.manualEndDateTime = rt.finishStr;
+        }
+      });
+
+      const startDates = rawTasks.map(rt => rt.startStr ? new Date(rt.startStr) : null).filter(Boolean);
+      const projStart = startDates.length ? new Date(Math.min(...startDates.map(d => d.getTime()))) : new Date();
+
+      const newProject = normalizeProject({
+        name: projectName + ' (importado)', start: projStart.toISOString().slice(0, 10),
+        baseline: null, resources, tasks,
+        includeColombianHolidays: false, customHolidays: importedHolidays,
+        hoursPerDay: importedHoursPerDay, _simpleIdMigration: true
+      });
+      state.projects.push(newProject); state.currentId = newProject.id;
+      recalc(); renderAll_inner(); renderTabs(); persistAll();
+      saveIndicator('Importado desde MS Project');
+      if (importedHolidays.length === 0) {
+        alert('Se importó el cronograma. El archivo no traía festivos configurados en su calendario, así que quedó sin festivos adicionales (desactivé el calendario colombiano automático para respetar exactamente lo que venía en el XML). Si este proyecto sí es para Colombia, activa la casilla "Incluir festivos colombianos" arriba.');
+      } else {
+        saveIndicator(`Importado con ${importedHolidays.length} festivo(s) del archivo`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('No se pudo importar el archivo. Asegúrate de exportarlo desde MS Project como "XML" (formato MSPDI), no como .mpp binario.\n\nDetalle: ' + e.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ============================================================
+   CREAR CRONOGRAMA DESDE TEXTO DE PROPUESTA
+   ============================================================ */
+const AI_RECIPE = `Actúa como asistente de planeación de proyectos. Te voy a compartir el texto de una propuesta comercial (o pégalo debajo de estas instrucciones). Extrae las fases, tareas, duraciones en días, responsables sugeridos, hitos de pago y dependencias, y devuélvelo ÚNICAMENTE en este formato de texto (sin explicaciones antes ni después):
+
+Fase 1: Nombre de la fase
+  Nombre de tarea | duración en días | responsable | % asignación | predecesoras
+  Nombre de otra tarea | duración en días | responsable | % asignación | predecesoras
+Fase 2: Nombre de la fase
+  ...
+
+Reglas del formato:
+- Las fases van SIN sangría. Las tareas van con sangría (espacios) debajo de su fase.
+- Si una tarea es un hito de pago o entregable sin duración, pon 0 en duración.
+- Las predecesoras se escriben con el <b>número de fila</b> de la tarea de la que depende, contando TODAS las filas en orden de arriba hacia abajo (incluyendo las fases), empezando en 1. Por ejemplo, si la fase 1 es la fila 1 y su primera tarea es la fila 2, "2" significa que depende de esa tarea. Puedes agregar el tipo y un adelanto/atraso en días, por ejemplo 2SS+2 o 2FF.
+- Si no hay dato para un campo, déjalo vacío pero conserva las barras "|".
+
+Aquí está la propuesta:
+[pega aquí el texto de tu propuesta comercial]`;
+
+function copyRecipe() {
+  navigator.clipboard.writeText(AI_RECIPE).then(() => saveIndicator('Receta copiada')).catch(() => {
+    const ta = document.createElement('textarea'); ta.value = AI_RECIPE; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta); saveIndicator('Receta copiada');
+  });
+}
+function fillExampleOutline() {
+  document.getElementById('outlineInput').value = `Fase 1: Análisis y Diseño
+  Levantamiento de requisitos | 10 | Alex | 100
+  Diseño técnico | 8 | Joan | 50 | 2
+  Hito: Diseño aprobado | 0 | | | 3
+Fase 2: Migración
+  Migración Ventas | 40 | Jessica | 100 | 4
+  Migración Servicio | 55 | Jhamir | 100 | 4SS+2
+Fase 3: Cierre
+  Pruebas integradas | 12 | Alex | 100 | 6FF,7
+  Garantía | 21 | Alex | 100 | 9`;
+}
+function parseOutlineText(text) {
+  const lines = text.split('\n').map(l => l.replace(/\t/g, '    ')).filter(l => l.trim() !== '');
+  const tasks = []; const stack = [];
+  lines.forEach(line => {
+    const indent = (line.match(/^(\s*)/)[1] || '').length;
+    let content = line.trim();
+    if (content.startsWith('-')) content = content.slice(1).trim();
+    const parts = content.split('|').map(s => s.trim());
+    let name = parts[0] || '(sin nombre)';
+    const durRaw = parts[1] !== undefined && parts[1] !== '' ? parseFloat(String(parts[1]).replace(/[^\d.]/g, '')) : '';
+    const resource = parts[2] || '';
+    const alloc = parts[3] !== undefined && parts[3] !== '' ? parseFloat(String(parts[3]).replace(/[^\d.]/g, '')) : 100;
+    const predText = parts[4] || '';
+    const isMilestone = /hito/i.test(name) || durRaw === 0;
+    name = name.replace(/\(hito\)/i, '').trim();
+    while (stack.length && stack[stack.length - 1].indent >= indent) stack.pop();
+    const parentId = stack.length ? stack[stack.length - 1].id : null;
+    const id = taskUid();
+    tasks.push(normalizeTask({ id, name, parentId, duration: isMilestone ? 0 : (durRaw || ''), allocation: alloc, resource, predText, isMilestone }));
+    stack.push({ indent, id });
+  });
+  return tasks;
+}
+function generateFromOutline() {
+  const text = document.getElementById('outlineInput').value;
+  if (!text.trim()) { alert('Pega primero el esquema de la propuesta en el cuadro de texto.'); return; }
+  const tasks = parseOutlineText(text);
+  if (tasks.length === 0) { alert('No se reconoció ninguna tarea. Revisa el formato (fases sin sangría, tareas con sangría).'); return; }
+  const name = document.getElementById('outlineProjectName').value || 'Proyecto desde propuesta';
+  const p = normalizeProject({ name, start: new Date().toISOString().slice(0, 10), tasks, baseline: null, resources: [], _simpleIdMigration: true });
+  state.projects.push(p); state.currentId = p.id;
+  recalc(); renderAll(); persistAll();
+  saveIndicator('Cronograma generado');
+}
+
+/* ============================================================
+   ALERTAS: copiar resumen + recordatorios del navegador
+   ============================================================ */
+function buildAlertsSummaryText(proj) {
+  if (!proj) return '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const leaves = proj.tasks.filter(t => !hasChildrenGlobal[t.id]);
+  const lines = [`Resumen de riesgos — ${proj.name}`, `Fecha: ${today.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})}`, ''];
+  const critical = leaves.filter(t => scheduleResults[t.id] && scheduleResults[t.id].critical && !scheduleResults[t.id].isMilestone);
+  lines.push(`RUTA CRÍTICA (${critical.length}):`);
+  critical.forEach(t => lines.push(`  • ${t.name} — termina ${scheduleResults[t.id].end.toLocaleDateString('es-CO',{day:'2-digit',month:'short'})}`));
+  lines.push('');
+  const vencidas = leaves.filter(t => { const r = scheduleResults[t.id]; return r && !r.isMilestone && r.end < today && (parseFloat(t.completado)||0) < 100; });
+  lines.push(`TAREAS VENCIDAS (${vencidas.length}):`);
+  vencidas.forEach(t => { const r = scheduleResults[t.id]; const dias = Math.round((today - r.end)/86400000); lines.push(`  • ${t.name} — vencida hace ${dias} día(s), ${parseFloat(t.completado)||0}% completado`); });
+  lines.push('');
+  const dayMap = computeResourceWorkload(proj);
+  const overloaded = Object.entries(dayMap).filter(([,days]) => Object.values(days).some(v=>v>100)).map(([r])=>r);
+  lines.push(`RECURSOS SOBREASIGNADOS (${overloaded.length}):`);
+  overloaded.forEach(r => lines.push(`  • ${r}`));
+  return lines.join('\n');
+}
+function copyAlertsSummary() {
+  const proj = currentProject(); if (!proj) return;
+  const text = buildAlertsSummaryText(proj);
+  navigator.clipboard.writeText(text).then(() => saveIndicator('Resumen copiado')).catch(() => {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta); saveIndicator('Resumen copiado');
+  });
+}
+function maybeNotify(proj) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const key = 'cronogramas2:lastNotify:' + proj.id;
+  const todayStr = new Date().toISOString().slice(0,10);
+  storageGet(key).then(r => {
+    if (r && r.value === todayStr) return; // ya se notificó hoy para este proyecto
+    const today = new Date(); today.setHours(0,0,0,0);
+    const leaves = proj.tasks.filter(t => !hasChildrenGlobal[t.id]);
+    const urgentes = leaves.filter(t => { const r2 = scheduleResults[t.id]; if (!r2 || r2.isMilestone) return false; const diasPara = Math.round((r2.end-today)/86400000); return (r2.critical && diasPara <= 3 && diasPara >= 0) || (r2.end < today && (parseFloat(t.completado)||0) < 100); });
+    if (urgentes.length > 0) {
+      new Notification(`Cronogramas ICX — ${proj.name}`, { body: `${urgentes.length} tarea(s) requieren atención hoy (ruta crítica próxima o vencidas).` });
+      storageSet(key, todayStr);
+    }
+  });
+}
+function requestNotifications() {
+  if (!('Notification' in window)) { alert('Este navegador no soporta notificaciones.'); return; }
+  Notification.requestPermission().then(perm => {
+    if (perm === 'granted') { saveIndicator('Recordatorios activados'); const proj = currentProject(); if (proj) maybeNotify(proj); }
+    else saveIndicator('Permiso denegado');
+  });
+}
+
+/* ============================================================
+   NOTIFICACIONES DENTRO DE LA PÁGINA (campanita + banner)
+   ============================================================ */
+function computeUrgentItems(proj) {
+  if (!proj) return [];
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const leaves = proj.tasks.filter(t => !hasChildrenGlobal[t.id]);
+  const items = [];
+  leaves.forEach(t => {
+    const r = scheduleResults[t.id]; if (!r || r.isMilestone) return;
+    const completado = parseFloat(t.completado) || 0;
+    if (r.end < today && completado < 100) {
+      const dias = Math.round((today - r.end) / 86400000);
+      items.push({ type: 'vencida', text: `${t.name || '(sin nombre)'} — vencida hace ${dias} día(s)`, taskId: t.id });
+    } else if (r.critical) {
+      const diasPara = Math.round((r.end - today) / 86400000);
+      if (diasPara >= 0 && diasPara <= 3) items.push({ type: 'critica', text: `${t.name || '(sin nombre)'} — ruta crítica, termina en ${diasPara} día(s)`, taskId: t.id });
+    }
+  });
+  const dayMap = computeResourceWorkload(proj);
+  Object.entries(dayMap).forEach(([resource, days]) => {
+    if (Object.values(days).some(v => v > 100)) items.push({ type: 'recurso', text: `${resource} está sobreasignado`, taskId: null });
+  });
+  return items;
+}
+let bannerDismissedFor = null;
+function renderNotifications() {
+  const proj = currentProject();
+  const bellBadge = document.getElementById('bellBadge');
+  const bellPanel = document.getElementById('bellPanel');
+  const banner = document.getElementById('urgentBanner');
+  if (!proj) { bellBadge.style.display = 'none'; banner.style.display = 'none'; return; }
+  const items = computeUrgentItems(proj);
+  if (items.length > 0) { bellBadge.textContent = items.length; bellBadge.style.display = 'inline-block'; }
+  else bellBadge.style.display = 'none';
+
+  bellPanel.innerHTML = items.length === 0
+    ? '<div class="bell-empty">Sin alertas urgentes por ahora 🎉</div>'
+    : items.map(it => `<div class="bell-item alert-${it.type === 'vencida' ? 'risk' : it.type === 'critica' ? 'crit' : 'res'}">${escapeHtml(it.text)}</div>`).join('');
+
+  if (items.length > 0 && bannerDismissedFor !== proj.id + ':' + items.length) {
+    banner.style.display = 'flex'; banner.className = 'urgent-banner';
+    banner.innerHTML = `<span>⚠️ <b>${items.length}</b> punto(s) requieren tu atención en "${escapeHtml(proj.name)}": ${escapeHtml(items.slice(0,2).map(i=>i.text).join(' · '))}${items.length>2?'…':''}</span><button id="btnDismissBanner">✕</button>`;
+    document.getElementById('btnDismissBanner').addEventListener('click', () => { bannerDismissedFor = proj.id + ':' + items.length; banner.style.display = 'none'; });
+  } else if (items.length === 0) {
+    banner.style.display = 'none';
+  }
+}
+document.getElementById('btnBell').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const panel = document.getElementById('bellPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('bellPanel');
+  if (panel.style.display === 'block' && !panel.contains(e.target) && e.target.id !== 'btnBell') panel.style.display = 'none';
+});
+
+/* ============================================================
+   SINCRONIZAR PRESUPUESTO CON EL CRONOGRAMA (tipo uso de recursos de Project)
+   ============================================================ */
+function computeScheduleHoursByResourceMonth(proj) {
+  const hoursPerDayProj = proj.hoursPerDay || 8;
+  const result = {};
+  proj.tasks.forEach(t => {
+    if (hasChildrenGlobal[t.id]) return;
+    const r = scheduleResults[t.id];
+    if (!r || r.isMilestone || !t.resource) return;
+    const totalHours = (parseFloat(t.duration) || 0) * hoursPerDayProj;
+    const totalWorkDays = r.effectiveDays || 1;
+    if (totalHours <= 0) return;
+    const name = t.resource.trim(); if (!name) return;
+    if (!result[name]) result[name] = {};
+    const hoursPerWorkDay = totalHours / totalWorkDays;
+    let d = new Date(r.start);
+    while (d <= r.end) {
+      if (isWorkingDay(d, holidaySetGlobal)) {
+        const mk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+        result[name][mk] = (result[name][mk] || 0) + hoursPerWorkDay;
+      }
+      d.setDate(d.getDate() + 1);
+    }
+  });
+  return result;
+}
+function computeScheduleRealHoursByResourceMonth(proj) {
+  const hoursPerDayProj = proj.hoursPerDay || 8;
+  const result = {};
+  proj.tasks.forEach(t => {
+    if (hasChildrenGlobal[t.id]) return;
+    const r = scheduleResults[t.id];
+    if (!r || r.isMilestone || !t.resource) return;
+    const pct = Math.min(100, parseFloat(t.completado) || 0) / 100;
+    const totalHours = (parseFloat(t.duration) || 0) * hoursPerDayProj * pct;
+    const totalWorkDays = r.effectiveDays || 1;
+    if (totalHours <= 0) return;
+    const name = t.resource.trim(); if (!name) return;
+    if (!result[name]) result[name] = {};
+    const hoursPerWorkDay = totalHours / totalWorkDays;
+    let d = new Date(r.start);
+    while (d <= r.end) {
+      if (isWorkingDay(d, holidaySetGlobal)) {
+        const mk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+        result[name][mk] = (result[name][mk] || 0) + hoursPerWorkDay;
+      }
+      d.setDate(d.getDate() + 1);
+    }
+  });
+  return result;
+}
+function syncRealHoursFromSchedule() {
+  const proj = currentProject(); if (!proj) return;
+  if (!confirm('Esto calcula las horas reales de cada recurso como "horas planeadas × % de avance real" de sus tareas en el cronograma, y reemplaza las horas reales que tengas cargadas para los roles que coincidan. ¿Continuar?')) return;
+  recalc();
+  const byResourceMonth = computeScheduleRealHoursByResourceMonth(proj);
+  const resourceNames = Object.keys(byResourceMonth);
+  if (resourceNames.length === 0) { alert('No hay tareas con recurso y avance real cargado todavía en el cronograma.'); return; }
+
+  const n = proj.budget.duracionMeses;
+  const fy_fm = (proj.budget.startMonth || '').split('-').map(Number);
+  resourceNames.forEach(name => {
+    let role = proj.budget.roles.find(rr => rr.name.trim().toLowerCase() === name.toLowerCase());
+    if (!role) {
+      const resMatch = proj.resources.find(rr => rr.name.trim().toLowerCase() === name.toLowerCase());
+      const rateHour = resMatch ? (parseFloat(resMatch.rate) || 0) / (proj.hoursPerDay || 8) : '';
+      role = { name, occupancyPct: '', rate: rateHour, monthlyHours: new Array(n).fill(0), monthlyHoursReal: [] };
+      proj.budget.roles.push(role);
+    }
+    role.monthlyHoursReal = new Array(n).fill(0);
+    for (let m = 0; m < n; m++) {
+      const d = new Date(fy_fm[0], fy_fm[1] - 1 + m, 1);
+      const mk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      role.monthlyHoursReal[m] = Math.round((byResourceMonth[name][mk] || 0) * 100) / 100;
+    }
+  });
+  renderBudget(); persistAll(); saveIndicator('Horas reales sincronizadas desde el avance');
+}
+
+function syncBudgetFromSchedule() {
+  const proj = currentProject(); if (!proj) return;
+  if (!confirm('Esto reemplaza las horas planeadas de los roles que coincidan con recursos del cronograma (por nombre), y ajusta la duración y el mes inicial del presupuesto para cubrir todo el cronograma. Las horas reales que ya hayas cargado no se tocan. ¿Continuar?')) return;
+  recalc();
+  const byResourceMonth = computeScheduleHoursByResourceMonth(proj);
+  const resourceNames = Object.keys(byResourceMonth);
+  if (resourceNames.length === 0) { alert('No hay tareas con recurso, duración y fechas calculadas en el cronograma todavía.'); return; }
+
+  const allMonthKeys = new Set();
+  resourceNames.forEach(name => Object.keys(byResourceMonth[name]).forEach(mk => allMonthKeys.add(mk)));
+  const sortedMonths = Array.from(allMonthKeys).sort();
+  const [fy, fm] = sortedMonths[0].split('-').map(Number);
+  const [ly, lm] = sortedMonths[sortedMonths.length - 1].split('-').map(Number);
+  const totalMonths = (ly - fy) * 12 + (lm - fm) + 1;
+
+  proj.budget.startMonth = sortedMonths[0];
+  proj.budget.duracionMeses = totalMonths;
+
+  resourceNames.forEach(name => {
+    let role = proj.budget.roles.find(rr => rr.name.trim().toLowerCase() === name.toLowerCase());
+    if (!role) {
+      const resMatch = proj.resources.find(rr => rr.name.trim().toLowerCase() === name.toLowerCase());
+      const rateHour = resMatch ? (parseFloat(resMatch.rate) || 0) / (proj.hoursPerDay || 8) : '';
+      role = { name, occupancyPct: '', rate: rateHour, monthlyHours: [], monthlyHoursReal: [] };
+      proj.budget.roles.push(role);
+    }
+    role.monthlyHoursReal = role.monthlyHoursReal || [];
+    while (role.monthlyHoursReal.length < totalMonths) role.monthlyHoursReal.push(0);
+    role.monthlyHoursReal.length = totalMonths;
+    role.monthlyHours = new Array(totalMonths).fill(0);
+    for (let m = 0; m < totalMonths; m++) {
+      const d = new Date(fy, fm - 1 + m, 1);
+      const mk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      role.monthlyHours[m] = Math.round((byResourceMonth[name][mk] || 0) * 100) / 100;
+    }
+    role._syncedFromSchedule = true;
+  });
+  renderBudget(); persistAll(); saveIndicator('Presupuesto sincronizado con el cronograma');
+}
+
+/* ============================================================
+   PRESUPUESTO (por rol: horas totales x valor/hora)
+   ============================================================ */
+function monthLabel(startMonth, i) {
+  const parts = (startMonth || '').split('-').map(Number);
+  const y = parts[0], m = parts[1];
+  if (!y || !m) return 'Mes ' + (i + 1);
+  const d = new Date(y, m - 1 + i, 1);
+  return d.toLocaleDateString('es-CO', { month: 'short', year: '2-digit' });
+}
+let expandedRoleIds = new Set();
+function buildRoleMonthlyPanel(proj, role, n) {
+  let rows = '';
+  const rate = parseFloat(role.rate) || 0;
+  for (let i = 0; i < n; i++) {
+    const label = monthLabel(proj.budget.startMonth, i);
+    const hPlan = role.monthlyHours[i] || 0, hReal = role.monthlyHoursReal[i] || 0;
+    const cPlan = hPlan * rate, cReal = hReal * rate;
+    rows += `<tr>
+      <td style="font-size:11.5px; color:var(--gray); white-space:nowrap;">${label}</td>
+      <td><input type="number" min="0" step="0.5" data-monthplan="${i}" value="${hPlan}" style="width:55px;"></td>
+      <td class="cost-col" style="font-size:11px;">${cPlan.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
+      <td style="border-left:2px solid var(--border);"><input type="number" min="0" step="0.5" data-monthreal="${i}" value="${hReal}" style="width:55px;"></td>
+      <td class="cost-col" style="font-size:11px;">${cReal.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
+    </tr>`;
+  }
+  return `<div style="background:#FBFAF7; border-top:2px solid var(--orange); border-bottom:1px solid var(--border); padding:14px 20px; max-height:280px; overflow-y:auto;">
+    <table style="width:auto; min-width:360px;">
+      <thead><tr>
+        <th style="font-size:10.5px;">Mes</th><th style="font-size:10.5px;">Horas plan.</th><th class="cost-col" style="font-size:10.5px;">Costo plan.</th>
+        <th style="font-size:10.5px; border-left:2px solid var(--border);">Horas real</th><th class="cost-col" style="font-size:10.5px;">Costo real</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+function renderBudget() {
+  const proj = currentProject();
+  const headerRow = document.getElementById('budgetHeaderRow');
+  const tbody = document.getElementById('budgetBody');
+  const tfoot = document.getElementById('budgetFooter');
+  const summary = document.getElementById('budgetSummary');
+  headerRow.innerHTML = ''; tbody.innerHTML = ''; tfoot.innerHTML = ''; summary.innerHTML = '';
+  if (!proj) return;
+
+  document.getElementById('budgetIngresos').value = proj.budget._flatIngresoDraft ?? '';
+  document.getElementById('budgetDuracionMeses').value = proj.budget.duracionMeses;
+  document.getElementById('budgetStartMonth').value = proj.budget.startMonth;
+  document.getElementById('budgetContractValue').value = proj.budget.contractValue ?? '';
+
+  const n = proj.budget.duracionMeses;
+  headerRow.innerHTML = `<th style="width:26px;"></th><th style="min-width:150px;">Recurso</th><th class="col-narrow">% Ocup.</th><th class="col-med cost-col">Valor/hora</th><th class="col-med">Horas plan.</th><th class="col-med cost-col">Costo plan.</th><th class="col-med">Horas reales</th><th class="col-med cost-col">Costo real</th><th style="width:26px;"></th>`;
+
+  const monthlyPlanTotals = new Array(n).fill(0);
+  const monthlyRealTotals = new Array(n).fill(0);
+  let grandPlanCost = 0, grandRealCost = 0, grandPlanHours = 0, grandRealHours = 0;
+
+  proj.budget.roles.forEach((role, idx) => {
+    while (role.monthlyHours.length < n) role.monthlyHours.push(0);
+    while (role.monthlyHoursReal.length < n) role.monthlyHoursReal.push(0);
+    role.monthlyHours.length = n; role.monthlyHoursReal.length = n;
+    const rate = parseFloat(role.rate) || 0;
+    const totalPlan = role.monthlyHours.reduce((s, h) => s + (parseFloat(h) || 0), 0);
+    const totalReal = role.monthlyHoursReal.reduce((s, h) => s + (parseFloat(h) || 0), 0);
+    const costoPlan = totalPlan * rate, costoReal = totalReal * rate;
+    grandPlanCost += costoPlan; grandRealCost += costoReal; grandPlanHours += totalPlan; grandRealHours += totalReal;
+    for (let i = 0; i < n; i++) { monthlyPlanTotals[i] += (role.monthlyHours[i] || 0) * rate; monthlyRealTotals[i] += (role.monthlyHoursReal[i] || 0) * rate; }
+
+    const isExpanded = expandedRoleIds.has(idx);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="text-align:center;"><button class="indent-btn" data-act="toggleRole" style="background:${isExpanded?'var(--orange)':'#fff'}; color:${isExpanded?'#fff':'var(--gray)'};" title="Ver/ocultar desglose mensual">${isExpanded ? '▲' : '▶'}</button></td>
+      <td><input type="text" data-field="name" value="${escapeHtml(role.name || '')}" placeholder="Ej. Jessica Botello" style="min-width:${role._syncedFromSchedule ? '130px' : '150px'};">${role._syncedFromSchedule ? ' <span title="Sincronizado con el cronograma">🔗</span>' : ''}</td>
+      <td class="col-narrow"><input type="number" min="0" max="100" data-field="occupancyPct" value="${role.occupancyPct ?? ''}" placeholder="%"></td>
+      <td class="col-med cost-col"><input type="number" min="0" data-field="rate" value="${role.rate ?? ''}"></td>
+      <td class="col-med" style="font-size:12.5px;">${totalPlan}</td>
+      <td class="col-med cost-col" style="font-size:12.5px;">${costoPlan.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
+      <td class="col-med" style="font-size:12.5px;">${totalReal}</td>
+      <td class="col-med cost-col" style="font-size:12.5px;">${costoReal.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
+      <td class="row-del">🗑</td>
+    `;
+    tr.querySelectorAll('input[data-field]').forEach(inp => {
+      const field = inp.dataset.field;
+      inp.addEventListener('input', () => { role[field] = inp.value; withScrollPreserved(renderBudget); persistAll(); });
+    });
+    tr.querySelector('[data-act="toggleRole"]').addEventListener('click', () => {
+      if (expandedRoleIds.has(idx)) expandedRoleIds.delete(idx); else expandedRoleIds.add(idx);
+      renderBudget();
+    });
+    tr.querySelector('.row-del').addEventListener('click', () => { proj.budget.roles.splice(idx, 1); expandedRoleIds.delete(idx); renderBudget(); persistAll(); });
+    tbody.appendChild(tr);
+
+    if (isExpanded) {
+      const panelTr = document.createElement('tr');
+      const panelTd = document.createElement('td');
+      panelTd.colSpan = 9; panelTd.style.padding = '0';
+      panelTd.innerHTML = buildRoleMonthlyPanel(proj, role, n);
+      panelTd.querySelectorAll('input[data-monthplan]').forEach(inp => {
+        inp.addEventListener('input', () => { role.monthlyHours[parseInt(inp.dataset.monthplan)] = parseFloat(inp.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
+      });
+      panelTd.querySelectorAll('input[data-monthreal]').forEach(inp => {
+        inp.addEventListener('input', () => { role.monthlyHoursReal[parseInt(inp.dataset.monthreal)] = parseFloat(inp.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
+      });
+      panelTr.appendChild(panelTd);
+      tbody.appendChild(panelTr);
+    }
+  });
+
+  while (proj.budget.monthlyIngresos.length < n) proj.budget.monthlyIngresos.push(0);
+  proj.budget.monthlyIngresos.length = n;
+  const totalIngresosPlan = proj.budget.monthlyIngresos.reduce((s,v)=>s+(parseFloat(v)||0),0);
+  let footerHtml = '';
+  footerHtml += `<tr class="budget-total-row"><td colspan="4">Total Costos Directos</td><td style="font-size:11.5px;">${grandPlanHours}h</td><td class="cost-col" style="font-size:11.5px;">${grandPlanCost.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td><td style="font-size:11.5px;">${grandRealHours}h</td><td class="cost-col" style="font-size:11.5px;">${grandRealCost.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td><td></td></tr>`;
+  tfoot.innerHTML = footerHtml;
+
+  const ingresosTotales = totalIngresosPlan;
+  const utilidadPlan = ingresosTotales - grandPlanCost;
+  const utilidadReal = ingresosTotales - grandRealCost;
+  const rentPlan = ingresosTotales > 0 ? Math.round((utilidadPlan / ingresosTotales) * 1000) / 10 : 0;
+  const rentReal = ingresosTotales > 0 ? Math.round((utilidadReal / ingresosTotales) * 1000) / 10 : 0;
+  const ejecucion = grandPlanHours > 0 ? Math.round((grandRealHours / grandPlanHours) * 1000) / 10 : 0;
+  summary.innerHTML = `
+    <div class="cost-box cost-col"><div class="k">Ingresos totales (${n} meses)</div><div class="v">${ingresosTotales.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
+    <div class="cost-box cost-col"><div class="k">Costo total proyectado (${grandPlanHours}h)</div><div class="v">${grandPlanCost.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
+    <div class="cost-box cost-col"><div class="k">Rentabilidad proyectada</div><div class="v" style="color:${rentPlan>=0?'var(--green)':'var(--red)'};">${rentPlan}%</div></div>
+    <div class="cost-box cost-col"><div class="k">Costo real a hoy (${grandRealHours}h)</div><div class="v">${grandRealCost.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
+    <div class="cost-box cost-col"><div class="k">Utilidad real a hoy</div><div class="v" style="color:${utilidadReal>=0?'var(--green)':'var(--red)'};">${utilidadReal.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
+    <div class="cost-box cost-col"><div class="k">Rentabilidad real a hoy</div><div class="v" style="color:${rentReal>=0?'var(--green)':'var(--red)'};">${rentReal}%</div></div>
+    <div class="cost-box"><div class="k">Ejecución de horas</div><div class="v" style="color:${ejecucion<=100?'var(--navy)':'var(--red)'};">${ejecucion}%</div></div>
+  `;
+
+  const ingresosPanel = document.getElementById('ingresosMesPanel');
+  let ingresosRows = '<table style="width:auto; min-width:220px;"><tbody>';
+  for (let i = 0; i < n; i++) {
+    ingresosRows += `<tr><td style="font-size:12px; color:var(--gray); padding:4px 8px 4px 0;">${monthLabel(proj.budget.startMonth, i)}</td><td><input type="number" min="0" class="cost-col" data-ingresomes="${i}" value="${proj.budget.monthlyIngresos[i] || 0}" style="width:120px;"></td></tr>`;
+  }
+  ingresosRows += '</tbody></table>';
+  ingresosPanel.innerHTML = ingresosRows;
+  ingresosPanel.querySelectorAll('input[data-ingresomes]').forEach(inp => {
+    inp.addEventListener('input', () => { proj.budget.monthlyIngresos[parseInt(inp.dataset.ingresomes)] = parseFloat(inp.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
+  });
+}
+/* ============================================================
+   EXPORTAR A EXCEL (Presupuesto y Cronograma)
+   ============================================================ */
+function exportBudgetExcel() {
+  const proj = currentProject(); if (!proj) return;
+  const n = proj.budget.duracionMeses;
+  const header = ['Recurso', '% Ocupación', 'Valor/hora', 'Horas totales plan.', 'Costo total plan.', 'Horas totales real', 'Costo total real'];
+  for (let i = 0; i < n; i++) { const label = monthLabel(proj.budget.startMonth, i); header.push(`${label} - Horas plan.`, `${label} - Costo plan.`, `${label} - Horas real`, `${label} - Costo real`); }
+  const rows = [header];
+  let grandPlanCost = 0, grandRealCost = 0;
+  proj.budget.roles.forEach(role => {
+    const rate = parseFloat(role.rate) || 0;
+    const totalPlan = (role.monthlyHours || []).reduce((s, h) => s + (parseFloat(h) || 0), 0);
+    const totalReal = (role.monthlyHoursReal || []).reduce((s, h) => s + (parseFloat(h) || 0), 0);
+    const costoPlan = totalPlan * rate, costoReal = totalReal * rate;
+    grandPlanCost += costoPlan; grandRealCost += costoReal;
+    const row = [role.name || '', role.occupancyPct || '', rate, totalPlan, costoPlan, totalReal, costoReal];
+    for (let i = 0; i < n; i++) {
+      const hPlan = (role.monthlyHours || [])[i] || 0, hReal = (role.monthlyHoursReal || [])[i] || 0;
+      row.push(hPlan, hPlan * rate, hReal, hReal * rate);
+    }
+    rows.push(row);
+  });
+  rows.push([]);
+  const ingresosTotales = (proj.budget.monthlyIngresos || []).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  rows.push(['Ingresos totales', ingresosTotales]);
+  rows.push(['Costo total planeado', grandPlanCost]);
+  rows.push(['Costo total real', grandRealCost]);
+  rows.push(['Utilidad (real)', ingresosTotales - grandRealCost]);
+  rows.push(['Rentabilidad (real) %', ingresosTotales > 0 ? Math.round(((ingresosTotales - grandRealCost) / ingresosTotales) * 1000) / 10 : 0]);
+
+  const ingresosRows = [['Mes', 'Ingreso']];
+  for (let i = 0; i < n; i++) ingresosRows.push([monthLabel(proj.budget.startMonth, i), proj.budget.monthlyIngresos[i] || 0]);
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Presupuesto');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ingresosRows), 'Ingresos por mes');
+  XLSX.writeFile(wb, `Presupuesto_${(proj.name || 'proyecto').replace(/[^a-zA-Z0-9]+/g, '_')}.xlsx`);
+}
+function exportTasksExcel() {
+  const proj = currentProject(); if (!proj) return;
+  const header = ['N°', 'Tarea', 'Días', '% Avance real', '% Avance esperado', 'Desviación', 'Responsable', 'Predecesoras', 'Inicio', 'Fin', 'Estado'];
+  const rows = [header];
+  flatOrder(proj).forEach(({ task: t, depth }) => {
+    const isPhase = !!hasChildrenGlobal[t.id];
+    const r = scheduleResults[t.id];
+    const { estado } = computeTaskEstado(t, r, isPhase);
+    let avanceReal, avanceEsp, dias;
+    if (isPhase) {
+      const pp = computePhaseProgress(proj, t.id);
+      avanceReal = pp ? pp.real : ''; avanceEsp = pp ? pp.esperado : '';
+      dias = r ? Math.round((r.end - r.start) / 86400000) + 1 : '';
+    } else {
+      avanceReal = t.completado ?? 0;
+      avanceEsp = (r && !r.isMilestone) ? computeExpectedProgress(r) : '';
+      dias = r ? (r.isMilestone ? 0 : r.effectiveDays) : '';
+    }
+    const desv = (avanceReal !== '' && avanceEsp !== '' && avanceEsp !== null) ? (parseFloat(avanceReal) - parseFloat(avanceEsp)) : '';
+    rows.push([
+      wbsMapGlobal[t.id] || '', '  '.repeat(depth) + (t.name || ''), dias, avanceReal, avanceEsp === null ? '' : avanceEsp, desv,
+      t.resource || '', t.predText || '',
+      r ? r.start.toLocaleDateString('es-CO') : '', r ? r.end.toLocaleDateString('es-CO') : '', estado
+    ]);
+  });
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 5 }, { wch: 45 }, { wch: 7 }, { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Cronograma');
+  XLSX.writeFile(wb, `Cronograma_${(proj.name || 'proyecto').replace(/[^a-zA-Z0-9]+/g, '_')}.xlsx`);
+}
+
+function importBudgetExcelFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const proj = currentProject(); if (!proj) return;
+      const findCol = (arr, regex) => { for (let c = 0; c < arr.length; c++) { if (arr[c] && regex.test(String(arr[c]))) return c; } return -1; };
+      let bestCandidate = null; // { roles, duracionMeses, ingresosVal, hasReal }
+      let found = false;
+
+      for (const sheetName of wb.SheetNames) {
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+        let anchorRow = -1;
+        for (let i = 0; i < rows.length; i++) {
+          if (rows[i] && rows[i][0] && String(rows[i][0]).toLowerCase().includes('costo proyectado por persona')) { anchorRow = i; break; }
+        }
+        if (anchorRow < 0) continue;
+        const headerArr = rows[anchorRow];
+        const occCol = findCol(headerArr, /ocupaci/i);
+        const rateCol = findCol(headerArr, /valor\s*por\s*hora|valor\s*hora/i);
+        const startCol = findCol(headerArr, /horas\s*planeadas/i);
+        if (startCol < 0) continue;
+        let patternWidth = 2;
+        for (let c = startCol + 1; c < headerArr.length; c++) { if (headerArr[c] && /horas\s*planeadas/i.test(String(headerArr[c]))) { patternWidth = c - startCol; break; } }
+        const hasReal = headerArr.slice(startCol, startCol + Math.max(patternWidth, 4)).some(c => c && /ejecutad/i.test(String(c)));
+
+        let ingresosVal = null;
+        for (let i = 0; i < Math.min(rows.length, 20); i++) {
+          if (rows[i] && rows[i][0] && String(rows[i][0]).toLowerCase().includes('ingresos')) {
+            const rowVals = rows[i].filter(v => typeof v === 'number');
+            if (rowVals.length) { ingresosVal = Math.max(...rowVals); break; }
+          }
+        }
+
+        const rawRoleRows = [];
+        for (let i = anchorRow + 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (!r || !r[0]) break;
+          const name = String(r[0]).trim();
+          if (/comisi[oó]n|total|utilidad|rentabilidad/i.test(name)) break;
+          rawRoleRows.push(r);
+        }
+        if (rawRoleRows.length === 0) continue;
+        let maxMonths = 0;
+        rawRoleRows.forEach(r => { const m = Math.floor(Math.max(0, r.length - startCol) / patternWidth); if (m > maxMonths) maxMonths = m; });
+        maxMonths = Math.max(1, Math.min(maxMonths, 36));
+
+        const roles = [];
+        rawRoleRows.forEach(r => {
+          const name = String(r[0]).trim();
+          const rate = rateCol >= 0 ? (typeof r[rateCol] === 'number' ? r[rateCol] : parseFloat(r[rateCol])) : NaN;
+          const occRaw = occCol >= 0 ? (typeof r[occCol] === 'number' ? r[occCol] * 100 : parseFloat(r[occCol])) : NaN;
+          const monthlyHours = [], monthlyHoursReal = [];
+          for (let m = 0; m < maxMonths; m++) {
+            const base = startCol + m * patternWidth;
+            const planH = r[base];
+            monthlyHours.push(typeof planH === 'number' ? planH : (parseFloat(planH) || 0));
+            if (hasReal && patternWidth >= 4) {
+              const realH = r[base + 2];
+              monthlyHoursReal.push(typeof realH === 'number' ? realH : (parseFloat(realH) || 0));
+            } else monthlyHoursReal.push(0);
+          }
+          if (!isNaN(rate) || monthlyHours.some(h => h > 0)) {
+            roles.push({ name, occupancyPct: isNaN(occRaw) ? '' : Math.round(occRaw), rate: isNaN(rate) ? '' : rate, monthlyHours, monthlyHoursReal });
+          }
+        });
+        if (roles.length === 0) continue;
+
+        const candidate = { roles, duracionMeses: maxMonths, ingresosVal, hasReal, sheetName };
+        // Preferir el candidato que sí traiga horas reales/ejecutadas
+        if (!bestCandidate || (candidate.hasReal && !bestCandidate.hasReal)) bestCandidate = candidate;
+        found = true;
+      }
+
+      if (bestCandidate) {
+        proj.budget.roles = bestCandidate.roles;
+        proj.budget.duracionMeses = bestCandidate.duracionMeses;
+        if (bestCandidate.ingresosVal) proj.budget.monthlyIngresos = new Array(bestCandidate.duracionMeses).fill(bestCandidate.ingresosVal);
+      }
+      if (!found) {
+        // Formato simple de respaldo: buscar encabezados "Rol"/"Horas"/"Valor" en cualquier hoja
+        for (const sheetName of wb.SheetNames) {
+          const ws = wb.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+          const headerRowIdx = rows.findIndex(r => r && r.some(c => typeof c === 'string' && /^rol|recurso/i.test(c.trim())));
+          if (headerRowIdx >= 0) {
+            const header = rows[headerRowIdx].map(c => (c || '').toString().toLowerCase());
+            const nameIdx = header.findIndex(h => /rol|recurso/.test(h));
+            const hoursIdx = header.findIndex(h => /hora/.test(h));
+            const rateIdx = header.findIndex(h => /valor|tarifa|rate/.test(h));
+            const roles = [];
+            const dur = proj.budget.duracionMeses || 6;
+            for (let i = headerRowIdx + 1; i < rows.length; i++) {
+              const r = rows[i]; if (!r || !r[nameIdx]) break;
+              const totalH = parseFloat(r[hoursIdx]) || 0;
+              const even = Math.round((totalH / dur) * 100) / 100;
+              roles.push({ name: String(r[nameIdx]), rate: r[rateIdx] || '', occupancyPct: '', monthlyHours: new Array(dur).fill(even), monthlyHoursReal: new Array(dur).fill(0) });
+            }
+            if (roles.length) { proj.budget.roles = roles; found = true; break; }
+          }
+        }
+      }
+      if (!found) { alert('No se reconoció el formato del Excel. Puedes llenar la tabla de roles manualmente, o revisar que tenga la fila "Costo Proyectado por persona x mes" o encabezados Rol/Horas/Valor.'); return; }
+      renderBudget(); persistAll(); saveIndicator('Presupuesto importado');
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo leer el archivo Excel: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ============================================================
+   SWITCHER DE VISTAS (Cronograma / Presupuesto y costos)
+   ============================================================ */
+let currentViewTab = 'cronograma';
+function setViewTab(view) {
+  currentViewTab = view;
+  document.getElementById('viewCronograma').style.display = view === 'cronograma' ? '' : 'none';
+  document.getElementById('viewCronograma2').style.display = view === 'cronograma' ? '' : 'none';
+  document.getElementById('viewCostos').style.display = view === 'costos' ? '' : 'none';
+  document.getElementById('viewTabCronograma').classList.toggle('active', view === 'cronograma');
+  document.getElementById('viewTabCostos').classList.toggle('active', view === 'costos');
+}
+document.getElementById('viewTabCronograma').addEventListener('click', () => setViewTab('cronograma'));
+document.getElementById('viewTabCostos').addEventListener('click', () => setViewTab('costos'));
+
+/* ============================================================
+   SINCRONIZAR INGRESOS DESDE HITOS DE PAGO DEL CRONOGRAMA
+   ============================================================ */
+function detectBillingMilestones(proj) {
+  const milestones = [];
+  proj.tasks.forEach(t => {
+    if (hasChildrenGlobal[t.id]) return;
+    const r = scheduleResults[t.id]; if (!r) return;
+    const name = t.name || '';
+    if (!/hito|pago/i.test(name)) return;
+    const m = name.match(/(\d+(?:\.\d+)?)\s*%/);
+    if (!m) return;
+    milestones.push({ taskId: t.id, name, pct: parseFloat(m[1]), date: r.end });
+  });
+  return milestones;
+}
+function monthIndexFromStart(startMonth, date) {
+  const parts = (startMonth || '').split('-').map(Number);
+  if (!parts[0] || !parts[1]) return -1;
+  return (date.getFullYear() - parts[0]) * 12 + (date.getMonth() + 1 - parts[1]);
+}
+function syncIngresosFromMilestones() {
+  const proj = currentProject(); if (!proj) return;
+  const contractValue = parseFloat(proj.budget.contractValue) || 0;
+  if (contractValue <= 0) { alert('Primero ingresa el "Valor total del contrato" para poder calcular el monto de cada hito.'); return; }
+  recalc();
+  const milestones = detectBillingMilestones(proj);
+  if (milestones.length === 0) { alert('No se encontraron tareas con hitos de pago en el cronograma. Agrega un porcentaje al nombre de la tarea, por ejemplo: "Migración Ventas (hito de pago 25%)".'); return; }
+  const sumPct = milestones.reduce((s, m) => s + m.pct, 0);
+  if (!confirm(`Se encontraron ${milestones.length} hito(s) de pago sumando ${sumPct}% del contrato:\n\n${milestones.map(m => `• ${m.name} — ${m.pct}% — ${m.date.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'})}`).join('\n')}\n\nEsto reemplaza los ingresos mensuales configurados. ¿Continuar?`)) return;
+
+  const n = proj.budget.duracionMeses;
+  const monthlyIngresos = new Array(n).fill(0);
+  let outOfRange = 0;
+  milestones.forEach(ms => {
+    const idx = monthIndexFromStart(proj.budget.startMonth, ms.date);
+    if (idx >= 0 && idx < n) monthlyIngresos[idx] += contractValue * ms.pct / 100;
+    else outOfRange++;
+  });
+  proj.budget.monthlyIngresos = monthlyIngresos;
+  proj.budget.billingMode = 'milestones';
+  renderBudget(); persistAll();
+  saveIndicator(outOfRange > 0 ? `Sincronizado (${outOfRange} hito(s) cayeron fuera del rango de meses configurado)` : 'Ingresos sincronizados desde hitos');
+}
+
+/* ============================================================
+   CHAT CON CLAUDE EMBEBIDO
+   Solo funciona cuando esta herramienta se abre DENTRO de Claude
+   (usa la API de Anthropic con autenticación que Claude maneja).
+   Si se publica como página independiente (ej. GitHub Pages), esta
+   sección se oculta automáticamente porque esa llamada no funcionaría ahí.
+   ============================================================ */
+let claudeChatHistory = [];
+function buildScheduleContextForClaude(proj) {
+  if (!proj) return 'No hay ningún proyecto cargado.';
+  const today = new Date();
+  const leaves = proj.tasks.filter(t => !hasChildrenGlobal[t.id]);
+  const lines = [`Proyecto: ${proj.name}`, `Fecha de hoy: ${today.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})}`, '', 'Tareas:'];
+  flatOrder(proj).forEach(({ task: t, depth }) => {
+    const isPhase = !!hasChildrenGlobal[t.id];
+    const r = scheduleResults[t.id];
+    if (isPhase) {
+      const pp = computePhaseProgress(proj, t.id);
+      lines.push(`${'  '.repeat(depth)}[FASE] ${wbsMapGlobal[t.id]} ${t.name}${pp ? ` — avance real ${pp.real}%, esperado ${pp.esperado}%` : ''}`);
+    } else if (r) {
+      const { estado } = computeTaskEstado(t, r, false);
+      const esp = computeExpectedProgress(r);
+      lines.push(`${'  '.repeat(depth)}${wbsMapGlobal[t.id]} ${t.name} | responsable: ${t.resource || 'sin asignar'} | inicio: ${r.start.toLocaleDateString('es-CO')} | fin: ${r.end.toLocaleDateString('es-CO')} | avance real: ${t.completado||0}% | avance esperado: ${esp===null?'-':esp+'%'} | estado: ${estado}${r.critical ? ' | RUTA CRÍTICA' : ''}`);
+    }
+  });
+  return lines.join('\n');
+}
+function appendChatMessage(role, text) {
+  const box = document.getElementById('claudeChatMessages');
+  const bubble = document.createElement('div');
+  bubble.style.cssText = role === 'user'
+    ? 'align-self:flex-end; background:var(--navy); color:#fff; padding:8px 12px; border-radius:12px 12px 2px 12px; max-width:85%;'
+    : 'align-self:flex-start; background:var(--gray-light); color:var(--charcoal); padding:8px 12px; border-radius:12px 12px 12px 2px; max-width:90%; white-space:pre-wrap;';
+  bubble.textContent = text;
+  box.appendChild(bubble);
+  box.scrollTop = box.scrollHeight;
+  return bubble;
+}
+async function sendClaudeChatMessage() {
+  const input = document.getElementById('claudeChatInput');
+  const question = input.value.trim();
+  if (!question) return;
+  input.value = '';
+  appendChatMessage('user', question);
+  const thinkingBubble = appendChatMessage('assistant', 'Pensando…');
+
+  const proj = currentProject();
+  const context = buildScheduleContextForClaude(proj);
+  claudeChatHistory.push({ role: 'user', content: question });
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: `Eres un asistente de gestión de proyectos. Aquí está el estado actual del cronograma:\n\n${context}\n\nResponde las preguntas del usuario de forma breve y concreta, en español, basándote únicamente en estos datos. Si preguntan por riesgos, prioriza tareas en ruta crítica, vencidas, o con desviación negativa grande. Si preguntan qué está próximo a vencer, mira las fechas de fin cercanas a hoy.`,
+        messages: claudeChatHistory
+      })
+    });
+    const data = await response.json();
+    const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+    thinkingBubble.textContent = textBlocks || 'No obtuve respuesta. Intenta de nuevo.';
+    if (textBlocks) claudeChatHistory.push({ role: 'assistant', content: textBlocks });
+    document.getElementById('claudeChatMessages').scrollTop = 999999;
+  } catch (e) {
+    console.error(e);
+    thinkingBubble.textContent = 'No se pudo conectar con Claude. Esto solo funciona cuando abres esta herramienta dentro de Claude.ai.';
+  }
+}
+function initClaudeChatVisibility() {
+  const bubble = document.getElementById('claudeChatBubble');
+  if (!hasArtifactStorage) {
+    bubble.style.display = 'none';
+  }
+}
+
+/* ============================================================
+   EVENTOS GLOBALES
+   ============================================================ */
+document.getElementById('projectName').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.name = e.target.value; renderTabs(); persistAll(); });
+document.getElementById('projectStart').addEventListener('change', (e) => { const proj = currentProject(); if (!proj) return; proj.start = e.target.value; recalc(); renderAll_inner(); persistAll(); });
+document.getElementById('filterText').addEventListener('input', (e) => { taskFilters.text = e.target.value; renderTaskTable(); });
+document.getElementById('filterResource').addEventListener('change', (e) => { taskFilters.resource = e.target.value; renderTaskTable(); });
+document.getElementById('filterEstado').addEventListener('change', (e) => { taskFilters.estado = e.target.value; renderTaskTable(); });
+document.getElementById('filterAvanceMin').addEventListener('input', (e) => { taskFilters.avanceMin = e.target.value; renderTaskTable(); });
+document.getElementById('filterAvanceMax').addEventListener('input', (e) => { taskFilters.avanceMax = e.target.value; renderTaskTable(); });
+document.getElementById('filterAsignMin').addEventListener('input', (e) => { taskFilters.asignMin = e.target.value; renderTaskTable(); });
+document.getElementById('filterAsignMax').addEventListener('input', (e) => { taskFilters.asignMax = e.target.value; renderTaskTable(); });
+document.getElementById('btnClearFilters').addEventListener('click', () => { taskFilters = { text: '', resource: '', estado: '', avanceMin: '', avanceMax: '', asignMin: '', asignMax: '' }; renderTaskTable(); });
+document.getElementById('btnExportTasksExcel').addEventListener('click', exportTasksExcel);
+document.getElementById('btnDeleteProject').addEventListener('click', deleteCurrentProject);
+document.getElementById('btnToggleClaudeChat').addEventListener('click', () => {
+  const panel = document.getElementById('claudeChatPanel');
+  const opening = panel.style.display === 'none' || !panel.style.display;
+  panel.style.display = opening ? 'flex' : 'none';
+  if (opening && document.getElementById('claudeChatMessages').children.length === 0) {
+    appendChatMessage('assistant', 'Hola, soy Claude. Pregúntame por ejemplo:\n· ¿Qué tarea está en riesgo?\n· ¿Qué está próximo a vencer?\n· ¿Cómo va la fase de Migración?');
+  }
+});
+document.getElementById('btnCloseClaudeChat').addEventListener('click', () => { document.getElementById('claudeChatPanel').style.display = 'none'; });
+document.getElementById('btnSendClaudeChat').addEventListener('click', sendClaudeChatMessage);
+document.getElementById('claudeChatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendClaudeChatMessage(); });
+document.getElementById('budgetIngresos').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget._flatIngresoDraft = e.target.value; persistAll(); });
+document.getElementById('btnApplyFlatIngreso').addEventListener('click', () => {
+  const proj = currentProject(); if (!proj) return;
+  const val = parseFloat(document.getElementById('budgetIngresos').value) || 0;
+  proj.budget.monthlyIngresos = new Array(proj.budget.duracionMeses).fill(val);
+  renderBudget(); persistAll();
+});
+document.getElementById('budgetContractValue').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.contractValue = e.target.value; persistAll(); });
+document.getElementById('budgetDuracionMeses').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.duracionMeses = parseInt(e.target.value) || 1; renderBudget(); persistAll(); });
+document.getElementById('budgetStartMonth').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.startMonth = e.target.value; renderBudget(); persistAll(); });
+document.getElementById('btnAddBudgetRole').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.budget.roles.push({ name: '', occupancyPct: '', rate: '', monthlyHours: new Array(proj.budget.duracionMeses).fill(0), monthlyHoursReal: new Array(proj.budget.duracionMeses).fill(0) }); renderBudget(); persistAll(); });
+document.getElementById('btnSyncFromSchedule').addEventListener('click', syncBudgetFromSchedule);
+document.getElementById('btnSyncRealFromSchedule').addEventListener('click', syncRealHoursFromSchedule);
+document.getElementById('btnToggleIngresosMes').addEventListener('click', () => {
+  const panel = document.getElementById('ingresosMesPanel');
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? 'block' : 'none';
+  document.getElementById('btnToggleIngresosMes').textContent = opening ? '▼ Ver/editar ingresos mes a mes' : '▶ Ver/editar ingresos mes a mes';
+});
+document.getElementById('btnSyncIngresosFromMilestones').addEventListener('click', syncIngresosFromMilestones);
+document.getElementById('btnImportBudgetExcel').addEventListener('click', () => document.getElementById('fileImportBudgetExcel').click());
+document.getElementById('btnExportBudgetExcel').addEventListener('click', exportBudgetExcel);
+document.getElementById('fileImportBudgetExcel').addEventListener('change', (e) => { if (e.target.files[0]) importBudgetExcelFile(e.target.files[0]); e.target.value = ''; });
+document.getElementById('btnClientMode').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.clientMode = !proj.clientMode; renderAll_inner(); persistAll(); });
+document.getElementById('btnAddTask').addEventListener('click', () => {
+  const proj = currentProject(); if (!proj) return;
+  const selTask = selectedTaskId ? proj.tasks.find(t => t.id === selectedTaskId) : null;
+  if (selTask) {
+    const newTask = insertSiblingAfter(proj, selTask);
+    selectedTaskId = newTask.id;
+  } else {
+    proj.tasks.push(normalizeTask({}));
+  }
+  recalc(); renderAll_inner(); persistAll();
+});
+document.getElementById('btnAddResource').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.resources.push({ name: '', rate: 0 }); renderAll_inner(); persistAll(); });
+document.getElementById('btnBaseline').addEventListener('click', () => {
+  const proj = currentProject(); if (!proj) return; const baseline = {};
+  Object.entries(scheduleResults).forEach(([id, r]) => { baseline[id] = { start: r.start.toISOString(), end: r.end.toISOString() }; });
+  proj.baseline = baseline; renderAll_inner(); persistAll();
+});
+document.getElementById('btnClearBaseline').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.baseline = null; renderAll_inner(); persistAll(); });
+document.getElementById('btnCopyRecipe').addEventListener('click', copyRecipe);
+document.getElementById('btnFillExampleOutline').addEventListener('click', fillExampleOutline);
+document.getElementById('btnGenerateFromOutline').addEventListener('click', generateFromOutline);
+document.getElementById('btnCopyAlerts').addEventListener('click', copyAlertsSummary);
+document.getElementById('btnEnableNotifications').addEventListener('click', requestNotifications);
+document.getElementById('btnExportPdf').addEventListener('click', openExportModal);
+document.getElementById('btnExportMspdi').addEventListener('click', exportMSPDI);
+document.getElementById('btnDownloadMppScript').addEventListener('click', downloadMppScript);
+document.getElementById('chkColombianHolidays').addEventListener('change', (e) => { const proj = currentProject(); if (!proj) return; proj.includeColombianHolidays = e.target.checked; recalc(); renderAll_inner(); persistAll(); });
+document.getElementById('hoursPerDayInput').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.hoursPerDay = parseFloat(e.target.value) || 8; renderAll_inner(); persistAll(); });
+document.getElementById('btnAddCustomHoliday').addEventListener('click', () => {
+  const proj = currentProject(); if (!proj) return;
+  const val = document.getElementById('customHolidayInput').value;
+  if (!val) return;
+  proj.customHolidays = proj.customHolidays || [];
+  if (!proj.customHolidays.includes(val)) proj.customHolidays.push(val);
+  document.getElementById('customHolidayInput').value = '';
+  recalc(); renderAll_inner(); persistAll();
+});
+document.getElementById('btnExportJson').addEventListener('click', exportJSON);
+document.getElementById('btnImportJson').addEventListener('click', () => document.getElementById('fileImportJson').click());
+document.getElementById('fileImportJson').addEventListener('change', (e) => { if (e.target.files[0]) importJSONFile(e.target.files[0]); e.target.value = ''; });
+document.getElementById('btnImportMspdi').addEventListener('click', () => document.getElementById('fileImportMspdi').click());
+document.getElementById('fileImportMspdi').addEventListener('change', (e) => { if (e.target.files[0]) importMSPDIFile(e.target.files[0]); e.target.value = ''; });
+document.getElementById('btnCancelExport').addEventListener('click', closeExportModal);
+document.getElementById('btnConfirmExport').addEventListener('click', doExport);
+
+function withScrollPreserved(fn) {
+  const scrollX = window.scrollX, scrollY = window.scrollY;
+  const active = document.activeElement;
+  let restoreInfo = null;
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT')) {
+    const container = active.closest('#taskBody');
+    if (container) {
+      const tr = active.closest('tr');
+      const rowIndex = Array.from(container.children).indexOf(tr);
+      restoreInfo = {
+        field: active.dataset.field || active.dataset.efield,
+        rowIndex,
+        selStart: (typeof active.selectionStart === 'number') ? active.selectionStart : null,
+        selEnd: (typeof active.selectionEnd === 'number') ? active.selectionEnd : null
+      };
+    }
+  }
+  fn();
+  window.scrollTo(scrollX, scrollY);
+  if (restoreInfo) {
+    const container = document.getElementById('taskBody');
+    const tr = container && container.children[restoreInfo.rowIndex];
+    if (tr) {
+      const el = tr.querySelector(`[data-field="${restoreInfo.field}"], [data-efield="${restoreInfo.field}"]`);
+      if (el) {
+        el.focus();
+        if (restoreInfo.selStart !== null && el.setSelectionRange) {
+          try { el.setSelectionRange(restoreInfo.selStart, restoreInfo.selEnd); } catch (e) {}
+        }
+      }
+    }
+    window.scrollTo(scrollX, scrollY);
+  }
+}
+
+function renderAll_inner() { renderToolbar(); renderCalendarSection(); renderTaskTable(); renderProgressSummary(); renderBudget(); renderResources(); renderTimeline(); renderGantt(); renderAlerts(); renderNotifications(); const proj = currentProject(); if (proj) maybeNotify(proj); }
+function renderAll() { renderTabs(); recalc(); renderAll_inner(); }
+
+/* ============================================================
+   DATOS DE EJEMPLO: Coopenae — Propuesta Comercial Redwood CX
+   ============================================================ */
+function buildCoopenaeProject() {
+  const f1 = taskUid(), f1t1 = taskUid(), f1m1 = taskUid();
+  const f2 = taskUid(), f2t1 = taskUid(), f2t2 = taskUid();
+  const f3 = taskUid(), f3t1 = taskUid(), f3t2 = taskUid();
+  return {
+    id: uid(), name: 'Coopenae – Propuesta Comercial Redwood CX', start: '2026-04-01', baseline: null,
+    resources: [
+      { name: 'Equipo ICX', rate: 0 }, { name: 'Equipo Ventas ICX', rate: 0 },
+      { name: 'Equipo Servicio ICX', rate: 0 }, { name: 'Equipo Capacitación ICX', rate: 0 },
+      { name: 'Equipo Garantía ICX / Serkes', rate: 0 }
+    ],
+    tasks: [
+      normalizeTask({ id: f1, name: 'Fase 1: Análisis y Diseño', parentId: null }),
+      normalizeTask({ id: f1t1, name: 'Levantamiento y diseño técnico', parentId: f1, duration: 21, allocation: 100, resource: 'Equipo ICX', predText: '' }),
+      normalizeTask({ id: f1m1, name: 'Hito: Diseño aprobado (pago 20%)', parentId: f1, isMilestone: true, duration: 0, predText: '1.1' }),
+      normalizeTask({ id: f2, name: 'Fase 2: Migración', parentId: null }),
+      normalizeTask({ id: f2t1, name: 'Migración Ventas (hito de pago 25%)', parentId: f2, duration: 63, allocation: 100, resource: 'Equipo Ventas ICX', predText: '1.2' }),
+      normalizeTask({ id: f2t2, name: 'Migración Servicio (hito de pago 25%)', parentId: f2, duration: 84, allocation: 100, resource: 'Equipo Servicio ICX', predText: '1.2SS' }),
+      normalizeTask({ id: f3, name: 'Fase 3: Capacitación y Garantía', parentId: null }),
+      normalizeTask({ id: f3t1, name: 'Capacitación y Gestión del Cambio', parentId: f3, duration: 63, allocation: 100, resource: 'Equipo Capacitación ICX', predText: '1.2' }),
+      normalizeTask({ id: f3t2, name: 'Garantía (post-cierre)', parentId: f3, duration: 21, allocation: 100, resource: 'Equipo Garantía ICX / Serkes', predText: '2.1,2.2' })
+    ]
+  };
+}
+
+/* ============================================================
+   INICIO
+   ============================================================ */
+(async function init() {
+  document.getElementById('storageModeIndicator').textContent = hasArtifactStorage ? '· Guardando en tu cuenta de Claude' : '· Guardando en este navegador';
+  initClaudeChatVisibility();
+  const loaded = await loadAll();
+  if (!loaded) {
+    const coopenae = normalizeProject(buildCoopenaeProject());
+    state.projects = [coopenae]; state.currentId = coopenae.id;
+    await persistAll();
+  }
+  renderAll();
+})();
+</script>
+</body>
+</html>
