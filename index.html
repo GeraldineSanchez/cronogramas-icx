@@ -77,7 +77,7 @@
   .cost-box{background:var(--gray-light); border-radius:8px; padding:12px 18px; min-width:150px;}
   .cost-box .k{font-size:10.5px; text-transform:uppercase; color:var(--gray); letter-spacing:.04em;}
   .cost-box .v{font-size:19px; font-weight:700; color:var(--navy); margin-top:2px;}
-  .modal-overlay{position:fixed; inset:0; background:rgba(27,42,74,0.55); display:none; align-items:center; justify-content:center; z-index:1000;}
+  .modal-overlay{position:fixed; inset:0; background:rgba(27,42,74,0.55); display:none; align-items:flex-start; justify-content:center; z-index:1000; overflow-y:auto; padding:40px 16px;}
   .modal-overlay.open{display:flex;}
   .modal-box{background:#fff; border-radius:12px; padding:26px 28px; width:420px; max-width:92vw; box-shadow:0 20px 50px rgba(0,0,0,.25);}
   .modal-box h2{margin:0 0 4px 0; font-size:17px; color:var(--navy);}
@@ -163,7 +163,8 @@
       <button class="btn btn-ghost" id="btnExportMspdi">🗂️ Exportar a MS Project (.xml)</button>
       <button class="btn btn-primary" id="btnExportTasksExcel">📊 Exportar cronograma a Excel</button>
       <button class="btn btn-ghost" id="btnImportMspdi">📥 Importar desde MS Project (.xml)</button>
-      <button class="btn btn-ghost" id="btnDownloadMppScript">🖥️ Script para convertir a .mpp real</button>
+      <button class="btn btn-ghost" id="btnImportExcelSchedule">📥 Importar cronograma desde Excel</button>
+      <input type="file" id="fileImportExcelSchedule" accept=".xlsx,.xls" style="display:none;">
       <button class="btn btn-ghost" id="btnExportJson">💾 Exportar JSON</button>
       <button class="btn btn-ghost" id="btnImportJson">📤 Importar JSON</button>
       <input type="file" id="fileImportMspdi" accept=".xml" style="display:none;">
@@ -273,7 +274,9 @@ Fase 2: Migración
     <div class="cost-summary" id="budgetSummary"></div>
     <div style="margin-bottom:14px;">
       <button class="btn btn-ghost btn-xs" id="btnToggleIngresosMes" style="padding:7px 12px;">▶ Ver/editar ingresos mes a mes</button>
+      <button class="btn btn-ghost btn-xs" id="btnToggleIndirectos" style="padding:7px 12px;">▶ Comisión de venta y costos indirectos (pólizas, etc.)</button>
       <div id="ingresosMesPanel" style="display:none; margin-top:10px; background:var(--gray-light); border-radius:8px; padding:12px; max-height:220px; overflow-y:auto;"></div>
+      <div id="indirectosPanel" style="display:none; margin-top:10px; background:var(--gray-light); border-radius:8px; padding:12px;"></div>
     </div>
     <div class="toolbar" style="margin:6px 0 10px 0;">
       <div class="field"><label>Ingreso mensual (para aplicar parejo)</label><input type="text" id="budgetIngresos" placeholder="Ej. 80000000" style="width:160px;"></div>
@@ -286,6 +289,8 @@ Fase 2: Migración
       <button class="btn btn-accent" id="btnSyncIngresosFromMilestones">🔗 Sincronizar ingresos desde hitos del cronograma</button>
       <button class="btn btn-accent" id="btnSyncFromSchedule">🔗 Sincronizar horas planeadas desde el cronograma</button>
       <button class="btn btn-ghost" id="btnSyncRealFromSchedule">🔗 Sincronizar horas reales desde el avance</button>
+      <button class="btn btn-accent" id="btnImportPolaris">⏱️ Importar horas reales desde reporte</button>
+      <input type="file" id="filePolaris" accept=".xlsx,.xls" style="display:none;">
       <button class="btn btn-ghost" id="btnImportBudgetExcel">📥 Importar desde Excel</button>
       <button class="btn btn-primary" id="btnExportBudgetExcel">📊 Exportar a Excel</button>
       <input type="file" id="fileImportBudgetExcel" accept=".xlsx,.xls" style="display:none;">
@@ -307,6 +312,9 @@ Fase 2: Migración
 
   <div class="card">
     <p class="section-title"><span class="n">7</span>Recursos y costos (por tarea)</p>
+    <p class="hint" style="margin-top:0;">
+      Esta tabla se calcula <b>desde el cronograma</b>, no desde el Presupuesto de arriba: suma los "Días-persona" de cada tarea donde la persona aparece como <b>Responsable</b>, y los multiplica por la <b>Tarifa/día</b> que le pongas aquí. Sirve para ver de un vistazo el costo total del proyecto según el trabajo asignado, y si alguien queda <b>Sobrecargado</b> (más del 100% de su jornada en algún día). Es independiente del presupuesto mes a mes — para eso usa la pestaña "💰 Presupuesto y costos".
+    </p>
     <div class="cost-summary" id="costSummary"></div>
     <div style="overflow-x:auto;">
     <table>
@@ -359,6 +367,18 @@ Fase 2: Migración
   <div style="padding:10px; border-top:1px solid var(--border); display:flex; gap:6px;">
     <input type="text" id="claudeChatInput" placeholder="Ej. ¿qué tarea está en riesgo?" style="flex:1; border:1px solid var(--border); border-radius:8px; padding:9px 10px; font-family:inherit; font-size:13px;">
     <button id="btnSendClaudeChat" class="btn btn-accent" style="padding:8px 14px;">➤</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="polarisProjectModal">
+  <div class="modal-box">
+    <h2>¿Qué proyecto(s) de Polaris corresponden a este cronograma?</h2>
+    <p class="hint2">El reporte trae registros de todos los clientes de ICX. Marca cuáles nombres corresponden a este proyecto (puede ser más de uno, ej. si el cliente tiene "Evolutivos" y "Soporte" por separado).</p>
+    <div id="polarisProjectList" style="max-height:260px; overflow-y:auto; margin:10px 0; border:1px solid var(--border); border-radius:8px; padding:8px 12px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCancelPolaris">Cancelar</button>
+      <button class="btn btn-accent" id="btnConfirmPolaris">Traer horas reales</button>
+    </div>
   </div>
 </div>
 
@@ -641,7 +661,7 @@ function normalizeTask(t) {
     id: t.id || taskUid(), name: t.name || '', parentId: t.parentId || null,
     duration: t.duration ?? '', allocation: t.allocation ?? 100, resource: t.resource || '',
     predText: t.predText || '', completado: t.completado ?? 0, isMilestone: !!t.isMilestone,
-    manualStart: t.manualStart || '', manualStartDateTime: t.manualStartDateTime || '', manualEndDateTime: t.manualEndDateTime || ''
+    manualStart: t.manualStart || '', manualStartDateTime: t.manualStartDateTime || '', manualEndDateTime: t.manualEndDateTime || '', notas: t.notas || ''
   };
 }
 function defaultProject(name) {
@@ -698,6 +718,13 @@ function normalizeProject(p) {
   }
   while (p.budget.monthlyIngresos.length < p.budget.duracionMeses) p.budget.monthlyIngresos.push(0);
   p.budget.monthlyIngresos.length = p.budget.duracionMeses;
+  p.budget.commissionPct = parseFloat(p.budget.commissionPct) || 0;
+  p.budget.indirectCosts = p.budget.indirectCosts || [];
+  p.budget.indirectCosts.forEach(ic => {
+    ic.monthlyValues = ic.monthlyValues || [];
+    while (ic.monthlyValues.length < p.budget.duracionMeses) ic.monthlyValues.push(0);
+    ic.monthlyValues.length = p.budget.duracionMeses;
+  });
   p.budget.roles.forEach(r => {
     r.monthlyHours = r.monthlyHours || [];
     r.monthlyHoursReal = r.monthlyHoursReal || [];
@@ -995,6 +1022,7 @@ function buildTaskEditPanel(proj, t, r, isPhase, resourceNames) {
     fieldsHtml += field('Avance de la fase (calculado de sus tareas)', `<div style="padding:9px 10px; font-size:13px; color:var(--charcoal); background:var(--gray-light); border-radius:7px;">${pp ? `Real ${pp.real}% · Esperado ${pp.esperado}%` : 'Sin tareas con avance todavía'}</div>`);
     if (r) fieldsHtml += field('Fechas (según sus tareas)', `<div style="padding:9px 10px; font-size:13px; color:var(--charcoal); background:var(--gray-light); border-radius:7px;">${r.start.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})} → ${r.end.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})}</div>`);
   }
+  fieldsHtml += `<div style="grid-column:1/-1;">${field('📝 Notas', `<textarea data-efield="notas" rows="2" placeholder="Ej. horario de la reunión, bloqueos, contexto..." style="${bigInputStyle} resize:vertical; font-family:inherit;">${escapeHtml(t.notas||'')}</textarea>`)}</div>`;
 
   return `<div class="task-edit-panel">
     <div class="task-edit-grid">${fieldsHtml}</div>
@@ -1105,6 +1133,7 @@ function renderTaskTable() {
             <button class="indent-btn" data-act="addsibling" title="Agregar tarea justo después de esta">+</button>
           </div>
           <input type="text" data-field="name" value="${escapeHtml(t.name || '')}" placeholder="Nombre de la tarea" style="font-weight:${isPhase ? 700 : 400};">
+          ${t.notas ? `<span title="${escapeHtml(t.notas)}" style="cursor:help; color:var(--orange); font-size:13px;">📝</span>` : ''}
           ${isPhase ? `<button class="btn btn-ghost btn-xs" data-act="addsub" title="Agregar subtarea directamente en esta fase">+ Subtarea</button>` : ''}
         </div>
       </td>
@@ -1280,7 +1309,7 @@ function renderResources() {
             proj.budget.roles.forEach(rr => { if ((rr.name || '').trim().toLowerCase() === oldKey) rr.name = newName; });
           }
         }
-        res[field] = inp.value; recalc(); renderAll_inner(); persistAll();
+        res[field] = inp.value; recalc(); withScrollPreserved(renderAll_inner); persistAll();
       });
     });
     tr.querySelector('.row-del').addEventListener('click', () => {
@@ -1593,110 +1622,6 @@ function isoDateTime(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 function escapeXml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;'); }
-
-/* ============================================================
-   SCRIPT DE CONVERSIÓN A .MPP REAL (usa MS Project local vía COM)
-   Escribir un .mpp binario nativo desde el navegador no es viable
-   (ni siquiera MPXJ, la librería que lee los .mpp de Coopenae, lo
-   soporta). La única forma confiable de generar un .mpp real es
-   dejar que el propio MS Project lo escriba — este script automatiza
-   ese paso usando tu instalación local, para no tener que abrir y
-   guardar cada archivo a mano.
-   ============================================================ */
-const MPP_CONVERTER_SCRIPT = `<#
-Convertir_a_MPP.ps1
---------------------
-Convierte uno o varios archivos .xml (formato MSPDI, exportados desde
-"Cronogramas ICX") a archivos .mpp reales, usando tu instalación local
-de Microsoft Project mediante automatización COM.
-
-REQUISITOS:
-- Microsoft Project de escritorio instalado en este computador (no la versión web).
-- Windows con PowerShell (no funciona en Mac/Linux, porque Project no corre ahí).
-
-USO:
-  Un solo archivo:
-    .\\Convertir_a_MPP.ps1 -Ruta "C:\\ruta\\Cronograma_Coopenae.xml"
-
-  Todos los .xml de una carpeta:
-    .\\Convertir_a_MPP.ps1 -Ruta "C:\\ruta\\carpeta_con_xmls"
-
-El .mpp queda guardado al lado del .xml original, con el mismo nombre.
-#>
-
-param(
-    [Parameter(Mandatory = $true)]
-    [string]$Ruta
-)
-
-function Convert-OneFile {
-    param([string]$XmlFullPath, $ProjectApp)
-
-    $MppPath = [System.IO.Path]::ChangeExtension($XmlFullPath, "mpp")
-    Write-Host "Procesando: $XmlFullPath"
-
-    try {
-        $ProjectApp.FileOpen($XmlFullPath)
-        Start-Sleep -Milliseconds 500
-
-        # Guardar como .mpp (Project infiere el formato binario nativo por la extensión .mpp)
-        $ProjectApp.FileSaveAs($MppPath)
-        Start-Sleep -Milliseconds 500
-
-        # Cerrar el proyecto activo sin volver a preguntar (ya se guardó)
-        $ProjectApp.FileCloseEx(0)
-
-        Write-Host "  -> Generado: $MppPath" -ForegroundColor Green
-        return $true
-    } catch {
-        Write-Host "  -> ERROR con este archivo: $($_.Exception.Message)" -ForegroundColor Red
-        return $false
-    }
-}
-
-if (-not (Test-Path $Ruta)) {
-    Write-Error "No se encontro la ruta: $Ruta"
-    exit 1
-}
-
-Write-Host "Abriendo Microsoft Project (puede tardar unos segundos)..."
-$project = New-Object -ComObject MSProject.Application
-$project.Visible = $false
-$project.DisplayAlerts = $false
-
-$ok = 0; $fail = 0
-
-try {
-    if ((Get-Item $Ruta) -is [System.IO.DirectoryInfo]) {
-        $archivos = Get-ChildItem -Path $Ruta -Filter *.xml
-        if ($archivos.Count -eq 0) {
-            Write-Host "No se encontraron archivos .xml en esa carpeta."
-        }
-        foreach ($f in $archivos) {
-            if (Convert-OneFile -XmlFullPath $f.FullName -ProjectApp $project) { $ok++ } else { $fail++ }
-        }
-    } else {
-        if (Convert-OneFile -XmlFullPath (Resolve-Path $Ruta).Path -ProjectApp $project) { $ok++ } else { $fail++ }
-    }
-} finally {
-    $project.Quit()
-    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($project) | Out-Null
-    [System.GC]::Collect()
-}
-
-Write-Host ""
-Write-Host "Listo. Convertidos correctamente: $ok | Con error: $fail" -ForegroundColor Cyan
-Write-Host "Si algun archivo dio error, revisa que Project pueda abrirlo manualmente primero (Archivo > Abrir)."
-`;
-function downloadMppScript() {
-  const blob = new Blob([MPP_CONVERTER_SCRIPT], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'Convertir_a_MPP.ps1';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  alert('Script descargado. Requiere Windows con MS Project de escritorio instalado. Uso:\n\n.\\Convertir_a_MPP.ps1 -Ruta "C:\\ruta\\tu_archivo.xml"\n\nTambién puedes darle la ruta de una carpeta completa para convertir varios .xml de una vez.');
-}
 
 function exportMSPDI() {
   const proj = currentProject(); if (!proj) return;
@@ -2328,6 +2253,7 @@ function monthLabel(startMonth, i) {
   return d.toLocaleDateString('es-CO', { month: 'short', year: '2-digit' });
 }
 let expandedRoleIds = new Set();
+let expandedICIds = new Set();
 function buildRoleMonthlyPanel(proj, role, n) {
   let rows = '';
   const rate = parseFloat(role.rate) || 0;
@@ -2433,14 +2359,19 @@ function renderBudget() {
   tfoot.innerHTML = footerHtml;
 
   const ingresosTotales = totalIngresosPlan;
-  const utilidadPlan = ingresosTotales - grandPlanCost;
-  const utilidadReal = ingresosTotales - grandRealCost;
+  const totalIndirectos = proj.budget.indirectCosts.reduce((s, ic) => s + ic.monthlyValues.reduce((s2, v) => s2 + (parseFloat(v) || 0), 0), 0);
+  const comisionValor = ingresosTotales * (proj.budget.commissionPct / 100);
+  const otrosCostos = totalIndirectos + comisionValor;
+  const utilidadPlan = ingresosTotales - grandPlanCost - otrosCostos;
+  const utilidadReal = ingresosTotales - grandRealCost - otrosCostos;
   const rentPlan = ingresosTotales > 0 ? Math.round((utilidadPlan / ingresosTotales) * 1000) / 10 : 0;
   const rentReal = ingresosTotales > 0 ? Math.round((utilidadReal / ingresosTotales) * 1000) / 10 : 0;
   const ejecucion = grandPlanHours > 0 ? Math.round((grandRealHours / grandPlanHours) * 1000) / 10 : 0;
   summary.innerHTML = `
     <div class="cost-box cost-col"><div class="k">Ingresos totales (${n} meses)</div><div class="v">${ingresosTotales.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
     <div class="cost-box cost-col"><div class="k">Costo total proyectado (${grandPlanHours}h)</div><div class="v">${grandPlanCost.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
+    <div class="cost-box cost-col" title="${proj.budget.commissionPct || 0}% sobre los ingresos totales"><div class="k">Comisión de venta (${proj.budget.commissionPct || 0}%)</div><div class="v">${comisionValor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
+    <div class="cost-box cost-col" title="${proj.budget.indirectCosts.map(ic=>ic.name||'(sin nombre)').join(', ') || 'Ninguno agregado todavía'}"><div class="k">Costos indirectos (pólizas, etc.)</div><div class="v">${totalIndirectos.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
     <div class="cost-box cost-col"><div class="k">Rentabilidad proyectada</div><div class="v" style="color:${rentPlan>=0?'var(--green)':'var(--red)'};">${rentPlan}%</div></div>
     <div class="cost-box cost-col"><div class="k">Costo real a hoy (${grandRealHours}h)</div><div class="v">${grandRealCost.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
     <div class="cost-box cost-col"><div class="k">Utilidad real a hoy</div><div class="v" style="color:${utilidadReal>=0?'var(--green)':'var(--red)'};">${utilidadReal.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
@@ -2449,7 +2380,7 @@ function renderBudget() {
   `;
 
   const ingresosPanel = document.getElementById('ingresosMesPanel');
-  let ingresosRows = '<table style="width:auto; min-width:220px;"><tbody>';
+  let ingresosRows = '<table style="width:auto; min-width:220px;"><tbody id="ingresosMesTbody">';
   for (let i = 0; i < n; i++) {
     ingresosRows += `<tr><td style="font-size:12px; color:var(--gray); padding:4px 8px 4px 0;">${monthLabel(proj.budget.startMonth, i)}</td><td><input type="number" min="0" class="cost-col" data-ingresomes="${i}" value="${proj.budget.monthlyIngresos[i] || 0}" style="width:120px;"></td></tr>`;
   }
@@ -2458,6 +2389,48 @@ function renderBudget() {
   ingresosPanel.querySelectorAll('input[data-ingresomes]').forEach(inp => {
     inp.addEventListener('input', () => { proj.budget.monthlyIngresos[parseInt(inp.dataset.ingresomes)] = parseFloat(inp.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
   });
+
+  renderIndirectCostsPanel(proj, n);
+}
+function renderIndirectCostsPanel(proj, n) {
+  const panel = document.getElementById('indirectosPanel');
+  let html = `<div style="margin-bottom:10px;"><label style="font-size:11px; color:var(--gray); text-transform:uppercase;">% Comisión de venta (sobre ingresos)</label><br>
+    <input type="number" min="0" max="100" step="0.1" id="inputCommissionPct" value="${proj.budget.commissionPct || 0}" style="width:80px; margin-top:4px;"></div>
+  <div style="font-size:11px; color:var(--gray); text-transform:uppercase; margin-bottom:6px;">Costos indirectos fijos (pólizas, licencias, etc.)</div>`;
+  proj.budget.indirectCosts.forEach((ic, idx) => {
+    const total = ic.monthlyValues.reduce((s, v) => s + (parseFloat(v) || 0), 0);
+    html += `<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; background:#fff; padding:6px 10px; border-radius:6px;">
+      <input type="text" data-icfield="name" data-icidx="${idx}" value="${escapeHtml(ic.name || '')}" placeholder="Ej. Pólizas" style="flex:1;">
+      <span style="font-size:11.5px; color:var(--gray);">Total: ${total.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</span>
+      <button class="indent-btn" data-act="toggleIC" data-icidx="${idx}" title="Ver meses">${expandedICIds.has(idx) ? '▲' : '▶'}</button>
+      <button class="indent-btn" data-act="delIC" data-icidx="${idx}" title="Eliminar">🗑</button>
+    </div>`;
+    if (expandedICIds.has(idx)) {
+      html += `<div style="background:#fff; border-radius:6px; padding:8px 10px; margin:-4px 0 8px 0;"><table style="width:auto;"><tbody id="icMonthTbody${idx}">`;
+      for (let m = 0; m < n; m++) {
+        html += `<tr><td style="font-size:11.5px; color:var(--gray); padding:2px 8px 2px 0;">${monthLabel(proj.budget.startMonth, m)}</td><td><input type="number" min="0" data-icmonth="${idx}" data-m="${m}" value="${ic.monthlyValues[m] || 0}" style="width:110px;"></td></tr>`;
+      }
+      html += '</tbody></table></div>';
+    }
+  });
+  html += `<button class="btn btn-ghost btn-xs" id="btnAddIndirect" style="margin-top:6px;">+ Agregar costo indirecto</button>`;
+  panel.innerHTML = html;
+
+  document.getElementById('inputCommissionPct').addEventListener('input', (e) => { proj.budget.commissionPct = parseFloat(e.target.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
+  panel.querySelectorAll('[data-icfield="name"]').forEach(inp => {
+    inp.addEventListener('input', () => { proj.budget.indirectCosts[parseInt(inp.dataset.icidx)].name = inp.value; withScrollPreserved(renderBudget); persistAll(); });
+  });
+  panel.querySelectorAll('[data-icmonth]').forEach(inp => {
+    inp.addEventListener('input', () => { proj.budget.indirectCosts[parseInt(inp.dataset.icidx)].monthlyValues[parseInt(inp.dataset.m)] = parseFloat(inp.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
+  });
+  panel.querySelectorAll('[data-act="toggleIC"]').forEach(btn => {
+    btn.addEventListener('click', () => { const i = parseInt(btn.dataset.icidx); if (expandedICIds.has(i)) expandedICIds.delete(i); else expandedICIds.add(i); renderBudget(); });
+  });
+  panel.querySelectorAll('[data-act="delIC"]').forEach(btn => {
+    btn.addEventListener('click', () => { proj.budget.indirectCosts.splice(parseInt(btn.dataset.icidx), 1); renderBudget(); persistAll(); });
+  });
+  const addBtn = document.getElementById('btnAddIndirect');
+  if (addBtn) addBtn.addEventListener('click', () => { proj.budget.indirectCosts.push({ name: '', monthlyValues: new Array(n).fill(0) }); renderBudget(); persistAll(); });
 }
 /* ============================================================
    EXPORTAR A EXCEL (Presupuesto y Cronograma)
@@ -2530,6 +2503,220 @@ function exportTasksExcel() {
   XLSX.writeFile(wb, `Cronograma_${(proj.name || 'proyecto').replace(/[^a-zA-Z0-9]+/g, '_')}.xlsx`);
 }
 
+/* ============================================================
+   IMPORTAR CRONOGRAMA DESDE EXCEL (exportado de MS Project)
+   Formato reconocido: columnas "% completado", "Nombre de tarea"
+   (con la jerarquía marcada por espacios al inicio, 3 por nivel),
+   "Comienzo", "Fin", "Nombres de los recursos" (pueden ser varios
+   separados por coma) y "Notas".
+   ============================================================ */
+function parseSpanishScheduleDate(str) {
+  if (!str) return null;
+  const s = String(str).trim();
+  const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*$/);
+  if (!m) return null;
+  let d = parseInt(m[1]), mo = parseInt(m[2]), y = parseInt(m[3]);
+  if (y < 100) y += 2000;
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return new Date(y, mo - 1, d);
+}
+function importExcelScheduleFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const wbData = new Uint8Array(e.target.result);
+      const wb = XLSX.read(wbData, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+
+      let headerRowIdx = -1;
+      for (let i = 0; i < rows.length; i++) {
+        if (rows[i].some(c => String(c).trim() === 'Nombre de tarea')) { headerRowIdx = i; break; }
+      }
+      if (headerRowIdx === -1) { alert('No se reconoció el formato. Este importador espera un Excel exportado de MS Project con una columna llamada "Nombre de tarea".'); return; }
+
+      const header = rows[headerRowIdx].map(h => String(h).trim());
+      const colPct = header.findIndex(h => h.toLowerCase().includes('completado'));
+      const colName = header.findIndex(h => h === 'Nombre de tarea');
+      const colStart = header.findIndex(h => h.toLowerCase().includes('comienzo'));
+      const colEnd = header.findIndex(h => h.toLowerCase() === 'fin');
+      const colRes = header.findIndex(h => h.toLowerCase().includes('recursos'));
+      const colNotes = header.findIndex(h => h.toLowerCase().includes('nota'));
+
+      const dataRows = rows.slice(headerRowIdx + 1).filter(r => r[colName] && String(r[colName]).trim());
+      if (dataRows.length === 0) { alert('No se encontraron filas de tareas debajo del encabezado.'); return; }
+
+      const tasks = [];
+      const stack = [];
+      let projectStart = null;
+      let multiResourceCount = 0;
+
+      dataRows.forEach(r => {
+        const rawName = String(r[colName] || '');
+        const indent = rawName.length - rawName.replace(/^ +/, '').length;
+        const depth = Math.round(indent / 3);
+        const name = rawName.trim();
+        while (stack.length && stack[stack.length - 1].depth >= depth) stack.pop();
+        const parentId = stack.length ? stack[stack.length - 1].id : null;
+        const id = taskUid();
+
+        const pctRaw = parseFloat(r[colPct]);
+        const completado = isNaN(pctRaw) ? 0 : Math.round(pctRaw <= 1 ? pctRaw * 100 : pctRaw);
+
+        const startDate = parseSpanishScheduleDate(r[colStart]);
+        const endDate = parseSpanishScheduleDate(r[colEnd]);
+        if (startDate && (!projectStart || startDate < projectStart)) projectStart = startDate;
+
+        const resourcesRaw = String(r[colRes] || '').trim();
+        const resourceList = resourcesRaw ? resourcesRaw.split(',').map(x => x.trim()).filter(Boolean) : [];
+        if (resourceList.length > 1) multiResourceCount++;
+        const notesRaw = colNotes >= 0 ? String(r[colNotes] || '').trim() : '';
+        let notas = notesRaw;
+        if (resourceList.length > 1) notas = (notas ? notas + ' | ' : '') + 'Recursos: ' + resourceList.join(', ');
+
+        const toDateStr = d => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
+        const durationDays = (startDate && endDate) ? Math.max(1, Math.round((endDate - startDate) / 86400000) + 1) : '';
+
+        tasks.push(normalizeTask({
+          id, name, parentId, completado, duration: durationDays,
+          resource: resourceList[0] || '',
+          manualStart: toDateStr(startDate),
+          manualStartDateTime: startDate ? toDateStr(startDate) + 'T08:00:00' : '',
+          manualEndDateTime: endDate ? toDateStr(endDate) + 'T16:59:59' : '',
+          notas
+        }));
+        stack.push({ depth, id });
+      });
+
+      const resourceNames = new Set();
+      tasks.forEach(t => { if (t.resource) resourceNames.add(t.resource); });
+      const resources = Array.from(resourceNames).map(name => ({ name, rate: 0 }));
+
+      const rootName = tasks[0] && tasks[0].name ? tasks[0].name : 'Cronograma importado';
+      const p = normalizeProject({
+        name: rootName + ' (Excel importado)',
+        start: projectStart ? projectStart.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+        baseline: null, resources, tasks, _simpleIdMigration: true
+      });
+      state.projects.push(p); state.currentId = p.id;
+      recalc(); renderAll(); renderTabs(); persistAll();
+      saveIndicator('Cronograma importado desde Excel');
+      if (multiResourceCount > 0) {
+        alert(`Importado: ${tasks.length} tareas.\n\n${multiResourceCount} tarea(s) tenían más de un responsable asignado — por ahora guardamos solo el primero como "Responsable" y dejamos la lista completa en las Notas (📝) de cada tarea, para no perder la información.`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo leer el archivo. Verifica que sea un Excel exportado de MS Project con las columnas: % completado, Nombre de tarea, Comienzo, Fin, Nombres de los recursos, Notas.');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ============================================================
+   IMPORTAR HORAS REALES DESDE REPORTE POLARIS (SharePoint)
+   Formato reconocido: hoja con columnas idTarea, Tipo, Descripción,
+   Tiempo, Proyecto, Usuario, Correo, Empresa, Minutos, Squad, Fecha,
+   Creación, Horas, Categoría — una fila por registro de tiempo.
+   ============================================================ */
+function parsePolarisDate(str) {
+  if (!str) return null;
+  const s = String(str).trim();
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (!m) return null;
+  const mo = parseInt(m[1]), d = parseInt(m[2]), y = parseInt(m[3]);
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return new Date(y, mo - 1, d);
+}
+let _polarisPendingRows = null;
+function importPolarisHoursFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      let sheetRows = null;
+      for (const sheetName of wb.SheetNames) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null });
+        const headerIdx = rows.findIndex(r => r && r.some(c => c === 'idTarea') && r.some(c => c === 'Proyecto') && r.some(c => c === 'Usuario') && r.some(c => c === 'Horas'));
+        if (headerIdx >= 0) {
+          const header = rows[headerIdx];
+          const colProyecto = header.indexOf('Proyecto');
+          const colUsuario = header.indexOf('Usuario');
+          const colFecha = header.indexOf('Fecha');
+          const colHoras = header.indexOf('Horas');
+          const parsed = [];
+          for (let i = headerIdx + 1; i < rows.length; i++) {
+            const r = rows[i]; if (!r || !r[colProyecto]) continue;
+            const horas = parseFloat(r[colHoras]);
+            if (!horas) continue;
+            parsed.push({ proyecto: String(r[colProyecto]).trim(), usuario: String(r[colUsuario] || '').trim(), fecha: parsePolarisDate(r[colFecha]), horas });
+          }
+          sheetRows = parsed;
+          break;
+        }
+      }
+      if (!sheetRows || sheetRows.length === 0) { alert('No se reconoció el formato. Se espera una hoja con columnas idTarea, Proyecto, Usuario, Fecha y Horas (reporte de Polaris/FollowUp).'); return; }
+      _polarisPendingRows = sheetRows;
+      openPolarisProjectModal(sheetRows);
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo leer el archivo: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+function openPolarisProjectModal(rows) {
+  const proj = currentProject();
+  const distinctProjects = Array.from(new Set(rows.map(r => r.proyecto))).sort();
+  const nameLower = (proj.name || '').toLowerCase();
+  const modal = document.getElementById('polarisProjectModal');
+  const list = document.getElementById('polarisProjectList');
+  list.innerHTML = distinctProjects.map(p => {
+    const guess = distinctProjects.length === 1 || (nameLower && p.toLowerCase().split(/\s+/).some(w => w.length > 3 && nameLower.includes(w)));
+    return `<label style="display:flex; align-items:center; gap:8px; padding:8px 4px; border-bottom:1px solid var(--border); cursor:pointer;">
+      <input type="checkbox" value="${escapeHtml(p)}" ${guess ? 'checked' : ''}> <span style="font-size:14px;">${escapeHtml(p)}</span>
+    </label>`;
+  }).join('');
+  modal.classList.add('open');
+}
+function closePolarisProjectModal() { document.getElementById('polarisProjectModal').classList.remove('open'); }
+function confirmPolarisImport() {
+  const proj = currentProject(); if (!proj) return;
+  const checked = Array.from(document.querySelectorAll('#polarisProjectList input:checked')).map(i => i.value);
+  if (checked.length === 0) { alert('Selecciona al menos un proyecto de Polaris.'); return; }
+  const rows = _polarisPendingRows.filter(r => checked.includes(r.proyecto) && r.fecha);
+  if (rows.length === 0) { alert('No se encontraron registros de horas para lo seleccionado.'); closePolarisProjectModal(); return; }
+
+  const n = proj.budget.duracionMeses;
+  const [fy, fm] = (proj.budget.startMonth || '').split('-').map(Number);
+  const byUserMonth = {};
+  const unmatchedNames = new Set();
+  rows.forEach(r => {
+    const mk = r.fecha.getFullYear() + '-' + String(r.fecha.getMonth() + 1).padStart(2, '0');
+    const key = r.usuario.trim().toLowerCase();
+    if (!byUserMonth[key]) byUserMonth[key] = { display: r.usuario.trim(), months: {} };
+    byUserMonth[key].months[mk] = (byUserMonth[key].months[mk] || 0) + r.horas;
+  });
+
+  let matchedCount = 0;
+  Object.values(byUserMonth).forEach(u => {
+    const role = proj.budget.roles.find(rr => rr.name.trim().toLowerCase() === u.display.toLowerCase());
+    if (!role) { unmatchedNames.add(u.display); return; }
+    matchedCount++;
+    role.monthlyHoursReal = new Array(n).fill(0);
+    for (let m = 0; m < n; m++) {
+      const d = new Date(fy, (fm - 1) + m, 1);
+      const mk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      role.monthlyHoursReal[m] = Math.round((u.months[mk] || 0) * 100) / 100;
+    }
+  });
+
+  renderBudget(); persistAll(); closePolarisProjectModal();
+  saveIndicator('Horas reales importadas desde Polaris');
+  let msg = `Horas reales actualizadas para ${matchedCount} recurso(s), desde ${rows.length} registros de Polaris.`;
+  if (unmatchedNames.size) msg += `\n\nNo se encontraron en "Recursos y costos" (no se importaron sus horas): ${Array.from(unmatchedNames).join(', ')}.\nAgrégalos primero como recurso si quieres traer sus horas.`;
+  alert(msg);
+}
+
 function importBudgetExcelFile(file) {
   const reader = new FileReader();
   reader.onload = (e) => {
@@ -2540,6 +2727,32 @@ function importBudgetExcelFile(file) {
       const findCol = (arr, regex) => { for (let c = 0; c < arr.length; c++) { if (arr[c] && regex.test(String(arr[c]))) return c; } return -1; };
       let bestCandidate = null; // { roles, duracionMeses, ingresosVal, hasReal }
       let found = false;
+      let monthlyIngresosFromHitos = null;
+
+      // Buscar una fila con celdas "Total Ingreso" repetidas (una por hito/mes) — esta es la
+      // fuente confiable del ingreso real por periodo, a diferencia de una fila genérica que
+      // diga "Ingresos" (que suele traer un valor de referencia como el TRM, no el ingreso).
+      for (const sheetName of wb.SheetNames) {
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+        for (const row of rows) {
+          if (!row) continue;
+          const vals = [];
+          let hits = 0;
+          for (let c = 0; c < row.length; c++) {
+            if (row[c] && /total\s*ingreso/i.test(String(row[c]))) {
+              hits++;
+              for (let cc = c + 1; cc < row.length; cc++) {
+                if (typeof row[cc] === 'number') { vals.push(row[cc]); break; }
+                if (row[cc] !== null && row[cc] !== undefined && row[cc] !== '' && !isNaN(parseFloat(row[cc]))) { vals.push(parseFloat(row[cc])); break; }
+                if (row[cc] && /total\s*ingreso/i.test(String(row[cc]))) { vals.push(0); break; }
+              }
+            }
+          }
+          if (hits >= 2 && vals.length) { monthlyIngresosFromHitos = vals; break; }
+        }
+        if (monthlyIngresosFromHitos) break;
+      }
 
       for (const sheetName of wb.SheetNames) {
         const ws = wb.Sheets[sheetName];
@@ -2609,7 +2822,14 @@ function importBudgetExcelFile(file) {
       if (bestCandidate) {
         proj.budget.roles = bestCandidate.roles;
         proj.budget.duracionMeses = bestCandidate.duracionMeses;
-        if (bestCandidate.ingresosVal) proj.budget.monthlyIngresos = new Array(bestCandidate.duracionMeses).fill(bestCandidate.ingresosVal);
+        if (proj.start) proj.budget.startMonth = proj.start.slice(0, 7);
+        if (monthlyIngresosFromHitos && monthlyIngresosFromHitos.length) {
+          const arr = new Array(bestCandidate.duracionMeses).fill(0);
+          for (let i = 0; i < Math.min(arr.length, monthlyIngresosFromHitos.length); i++) arr[i] = monthlyIngresosFromHitos[i];
+          proj.budget.monthlyIngresos = arr;
+        } else if (bestCandidate.ingresosVal) {
+          proj.budget.monthlyIngresos = new Array(bestCandidate.duracionMeses).fill(bestCandidate.ingresosVal);
+        }
       }
       if (!found) {
         // Formato simple de respaldo: buscar encabezados "Rol"/"Horas"/"Valor" en cualquier hoja
@@ -2635,6 +2855,40 @@ function importBudgetExcelFile(file) {
         }
       }
       if (!found) { alert('No se reconoció el formato del Excel. Puedes llenar la tabla de roles manualmente, o revisar que tenga la fila "Costo Proyectado por persona x mes" o encabezados Rol/Horas/Valor.'); return; }
+
+      // Detectar % de comisión de venta (fila "Comisión de venta", el % suele ir en la fila
+      // siguiente como una fracción, ej. 0.03 = 3%). Y detectar nombres de costos indirectos
+      // (ej. "Pólizas") para crear la línea lista — sin adivinar los montos por columna, ya
+      // que ese cruce es más frágil; los montos los completas tú en el panel nuevo.
+      let commissionFound = null;
+      const indirectNamesFound = new Set();
+      for (const sheetName of wb.SheetNames) {
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i]; if (!row) continue;
+          if (row[0] && /comisi[oó]n\s*de\s*venta/i.test(String(row[0]))) {
+            const nextRow = rows[i + 1];
+            if (nextRow) {
+              const frac = nextRow.find(v => typeof v === 'number' && v > 0 && v < 1);
+              if (frac) commissionFound = Math.round(frac * 1000) / 10;
+            }
+          }
+          if (row[0] && /p[oó]lizas|seguridad\s*social|licencias\s*software/i.test(String(row[0]))) {
+            indirectNamesFound.add(String(row[0]).trim());
+          }
+        }
+      }
+      if (commissionFound !== null) proj.budget.commissionPct = commissionFound;
+      indirectNamesFound.forEach(name => {
+        if (!proj.budget.indirectCosts.some(ic => ic.name.toLowerCase() === name.toLowerCase())) {
+          proj.budget.indirectCosts.push({ name, monthlyValues: new Array(proj.budget.duracionMeses).fill(0) });
+        }
+      });
+      if (commissionFound !== null || indirectNamesFound.size > 0) {
+        setTimeout(() => alert(`También encontré:\n${commissionFound !== null ? `• Comisión de venta: ${commissionFound}% (ya la puse)\n` : ''}${indirectNamesFound.size ? `• Costo(s) indirecto(s): ${Array.from(indirectNamesFound).join(', ')} (creé la línea, pero completa tú los montos mensuales en "Comisión de venta y costos indirectos" — no me arriesgué a leer esa columna automático porque el cruce es más frágil)` : ''}`), 300);
+      }
+
       renderBudget(); persistAll(); saveIndicator('Presupuesto importado');
     } catch (err) {
       console.error(err);
@@ -2821,11 +3075,21 @@ document.getElementById('budgetStartMonth').addEventListener('input', (e) => { c
 document.getElementById('btnAddBudgetRole').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.budget.roles.push({ name: '', occupancyPct: '', rate: '', monthlyHours: new Array(proj.budget.duracionMeses).fill(0), monthlyHoursReal: new Array(proj.budget.duracionMeses).fill(0) }); renderBudget(); persistAll(); });
 document.getElementById('btnSyncFromSchedule').addEventListener('click', syncBudgetFromSchedule);
 document.getElementById('btnSyncRealFromSchedule').addEventListener('click', syncRealHoursFromSchedule);
+document.getElementById('btnImportPolaris').addEventListener('click', () => document.getElementById('filePolaris').click());
+document.getElementById('filePolaris').addEventListener('change', (e) => { if (e.target.files[0]) { importPolarisHoursFile(e.target.files[0]); e.target.value = ''; } });
+document.getElementById('btnCancelPolaris').addEventListener('click', closePolarisProjectModal);
+document.getElementById('btnConfirmPolaris').addEventListener('click', confirmPolarisImport);
 document.getElementById('btnToggleIngresosMes').addEventListener('click', () => {
   const panel = document.getElementById('ingresosMesPanel');
   const opening = panel.style.display === 'none';
   panel.style.display = opening ? 'block' : 'none';
   document.getElementById('btnToggleIngresosMes').textContent = opening ? '▼ Ver/editar ingresos mes a mes' : '▶ Ver/editar ingresos mes a mes';
+});
+document.getElementById('btnToggleIndirectos').addEventListener('click', () => {
+  const panel = document.getElementById('indirectosPanel');
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? 'block' : 'none';
+  document.getElementById('btnToggleIndirectos').textContent = (opening ? '▼' : '▶') + ' Comisión de venta y costos indirectos (pólizas, etc.)';
 });
 document.getElementById('btnSyncIngresosFromMilestones').addEventListener('click', syncIngresosFromMilestones);
 document.getElementById('btnImportBudgetExcel').addEventListener('click', () => document.getElementById('fileImportBudgetExcel').click());
@@ -2857,7 +3121,6 @@ document.getElementById('btnCopyAlerts').addEventListener('click', copyAlertsSum
 document.getElementById('btnEnableNotifications').addEventListener('click', requestNotifications);
 document.getElementById('btnExportPdf').addEventListener('click', openExportModal);
 document.getElementById('btnExportMspdi').addEventListener('click', exportMSPDI);
-document.getElementById('btnDownloadMppScript').addEventListener('click', downloadMppScript);
 document.getElementById('chkColombianHolidays').addEventListener('change', (e) => { const proj = currentProject(); if (!proj) return; proj.includeColombianHolidays = e.target.checked; recalc(); renderAll_inner(); persistAll(); });
 document.getElementById('hoursPerDayInput').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.hoursPerDay = parseFloat(e.target.value) || 8; renderAll_inner(); persistAll(); });
 document.getElementById('btnAddCustomHoliday').addEventListener('click', () => {
@@ -2873,6 +3136,8 @@ document.getElementById('btnExportJson').addEventListener('click', exportJSON);
 document.getElementById('btnImportJson').addEventListener('click', () => document.getElementById('fileImportJson').click());
 document.getElementById('fileImportJson').addEventListener('change', (e) => { if (e.target.files[0]) importJSONFile(e.target.files[0]); e.target.value = ''; });
 document.getElementById('btnImportMspdi').addEventListener('click', () => document.getElementById('fileImportMspdi').click());
+document.getElementById('btnImportExcelSchedule').addEventListener('click', () => document.getElementById('fileImportExcelSchedule').click());
+document.getElementById('fileImportExcelSchedule').addEventListener('change', (e) => { if (e.target.files[0]) { importExcelScheduleFile(e.target.files[0]); e.target.value = ''; } });
 document.getElementById('fileImportMspdi').addEventListener('change', (e) => { if (e.target.files[0]) importMSPDIFile(e.target.files[0]); e.target.value = ''; });
 document.getElementById('btnCancelExport').addEventListener('click', closeExportModal);
 document.getElementById('btnConfirmExport').addEventListener('click', doExport);
@@ -2881,12 +3146,13 @@ function withScrollPreserved(fn) {
   const scrollX = window.scrollX, scrollY = window.scrollY;
   const active = document.activeElement;
   let restoreInfo = null;
-  if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT')) {
-    const container = active.closest('#taskBody');
-    if (container) {
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA')) {
+    const container = active.closest('tbody');
+    if (container && container.id) {
       const tr = active.closest('tr');
       const rowIndex = Array.from(container.children).indexOf(tr);
       restoreInfo = {
+        containerId: container.id,
         field: active.dataset.field || active.dataset.efield,
         rowIndex,
         selStart: (typeof active.selectionStart === 'number') ? active.selectionStart : null,
@@ -2897,7 +3163,7 @@ function withScrollPreserved(fn) {
   fn();
   window.scrollTo(scrollX, scrollY);
   if (restoreInfo) {
-    const container = document.getElementById('taskBody');
+    const container = document.getElementById(restoreInfo.containerId);
     const tr = container && container.children[restoreInfo.rowIndex];
     if (tr) {
       const el = tr.querySelector(`[data-field="${restoreInfo.field}"], [data-efield="${restoreInfo.field}"]`);
