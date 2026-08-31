@@ -370,6 +370,19 @@ Fase 2: Migración
   </div>
 </div>
 
+<div class="modal-overlay" id="billingMilestonesModal">
+  <div class="modal-box">
+    <h2>Confirma el % de cada hito de pago</h2>
+    <p class="hint2">Encontramos estas tareas de hito en el cronograma. Ajusta el % de cada una si hace falta — debe sumar 100% del contrato.</p>
+    <div id="billingMilestonesList" style="max-height:320px; overflow-y:auto; margin:10px 0; border:1px solid var(--border); border-radius:8px; padding:4px 12px;"></div>
+    <div style="text-align:right; font-weight:700; font-size:13px; margin-bottom:10px;" id="billingMilestonesTotal">Total: 0%</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCancelBillingMs">Cancelar</button>
+      <button class="btn btn-accent" id="btnConfirmBillingMs">Aplicar a los ingresos</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="polarisProjectModal">
   <div class="modal-box">
     <h2>¿Qué proyecto(s) de Polaris corresponden a este cronograma?</h2>
@@ -649,7 +662,7 @@ async function storageGet(key) {
 }
 async function storageSet(key, value) {
   if (hasArtifactStorage) { try { return await window.storage.set(key, value); } catch (e) { return null; } }
-  try { localStorage.setItem(key, value); return { key, value }; } catch (e) { return null; }
+  localStorage.setItem(key, value); return { key, value };
 }
 
 let state = { projects: [], currentId: null };
@@ -734,17 +747,27 @@ function normalizeProject(p) {
   return p;
 }
 function currentProject() { return state.projects.find(p => p.id === state.currentId); }
-function saveIndicator(msg) {
+function saveIndicator(msg, isError) {
   const el = document.getElementById('saveIndicator'); el.textContent = msg;
+  el.style.color = isError ? 'var(--red)' : '';
+  el.style.fontWeight = isError ? '700' : '';
+  if (isError) return; // los errores se quedan visibles hasta la próxima acción, no desaparecen solos
   setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 1500);
 }
 async function persistAll() {
   try {
-    await storageSet('cronogramas2:index', JSON.stringify(state.projects.map(p => p.id)));
-    for (const p of state.projects) await storageSet('cronogramas2:project:' + p.id, JSON.stringify(p));
+    const r1 = await storageSet('cronogramas2:index', JSON.stringify(state.projects.map(p => p.id)));
+    if (!r1) throw new Error('No se pudo escribir en el almacenamiento del navegador (¿modo incógnito, o localStorage bloqueado/lleno?)');
+    for (const p of state.projects) {
+      const r2 = await storageSet('cronogramas2:project:' + p.id, JSON.stringify(p));
+      if (!r2) throw new Error('No se pudo guardar el proyecto "' + p.name + '" (¿modo incógnito, o localStorage bloqueado/lleno?)');
+    }
     await storageSet('cronogramas2:current', state.currentId || '');
     saveIndicator('Guardado');
-  } catch (e) { console.error(e); saveIndicator('Error al guardar'); }
+  } catch (e) {
+    console.error('Error al guardar:', e);
+    saveIndicator('⚠️ No se pudo guardar: ' + (e && e.message ? e.message : e), true);
+  }
 }
 async function loadAll() {
   try {
@@ -820,6 +843,7 @@ function recalc() {
   (proj.customHolidays || []).forEach(ds => { const d = new Date(ds + 'T00:00:00'); holidaySetGlobal.add(d.toDateString()); });
   const { results, wbsMap, hasChildren } = scheduleProjectV2(proj.tasks, startDate, holidaySetGlobal, proj.hoursPerDay || 8);
   scheduleResults = results; wbsMapGlobal = wbsMap; hasChildrenGlobal = hasChildren;
+  if (proj.budget && proj.budget.billingMode === 'milestones') applyMilestoneIngresos(proj);
 }
 function taskCost(t) {
   const proj = currentProject(); if (!proj) return 0;
@@ -1036,7 +1060,7 @@ function wireTaskEditPanel(editTr, proj, t) {
       if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; }
       else if (field === 'manualStart') { t.manualStart = inp.value; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
       else t[field] = inp.value;
-      recalc(); withScrollPreserved(renderAll_inner); persistAll();
+      if (evName === 'change') { recalc(); withScrollPreserved(renderAll_inner); persistAll(); } else { scheduleRecalcRender(); }
     });
   });
 }
@@ -1206,7 +1230,7 @@ function renderTaskTable() {
         } else if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; }
         else if (field === 'manualStart') { t.manualStart = inp.value; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
         else t[field] = inp.type === 'checkbox' ? inp.checked : inp.value;
-        recalc(); withScrollPreserved(renderAll_inner); persistAll();
+        if (evName === 'change') { recalc(); withScrollPreserved(renderAll_inner); persistAll(); } else { scheduleRecalcRender(); }
       });
     });
     tr.querySelector('[data-act="in"]').addEventListener('click', () => { if (indentTask(proj, t)) { recalc(); renderAll_inner(); persistAll(); } });
@@ -1309,7 +1333,7 @@ function renderResources() {
             proj.budget.roles.forEach(rr => { if ((rr.name || '').trim().toLowerCase() === oldKey) rr.name = newName; });
           }
         }
-        res[field] = inp.value; recalc(); withScrollPreserved(renderAll_inner); persistAll();
+        res[field] = inp.value; scheduleRecalcRender();
       });
     });
     tr.querySelector('.row-del').addEventListener('click', () => {
@@ -2924,8 +2948,7 @@ function detectBillingMilestones(proj) {
     const name = t.name || '';
     if (!/hito|pago/i.test(name)) return;
     const m = name.match(/(\d+(?:\.\d+)?)\s*%/);
-    if (!m) return;
-    milestones.push({ taskId: t.id, name, pct: parseFloat(m[1]), date: r.end });
+    milestones.push({ taskId: t.id, name, pct: m ? parseFloat(m[1]) : null, date: r.end });
   });
   return milestones;
 }
@@ -2940,22 +2963,67 @@ function syncIngresosFromMilestones() {
   if (contractValue <= 0) { alert('Primero ingresa el "Valor total del contrato" para poder calcular el monto de cada hito.'); return; }
   recalc();
   const milestones = detectBillingMilestones(proj);
-  if (milestones.length === 0) { alert('No se encontraron tareas con hitos de pago en el cronograma. Agrega un porcentaje al nombre de la tarea, por ejemplo: "Migración Ventas (hito de pago 25%)".'); return; }
-  const sumPct = milestones.reduce((s, m) => s + m.pct, 0);
-  if (!confirm(`Se encontraron ${milestones.length} hito(s) de pago sumando ${sumPct}% del contrato:\n\n${milestones.map(m => `• ${m.name} — ${m.pct}% — ${m.date.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'})}`).join('\n')}\n\nEsto reemplaza los ingresos mensuales configurados. ¿Continuar?`)) return;
+  if (milestones.length === 0) { alert('No se encontraron tareas de hito de pago en el cronograma. Deben tener la palabra "hito" o "pago" en el nombre, ej. "Hito 2: Pago-Diseño Mes 1".'); return; }
+  openBillingMilestonesModal(milestones, contractValue);
+}
+function openBillingMilestonesModal(milestones, contractValue) {
+  const withPct = milestones.filter(m => m.pct !== null);
+  const withoutPct = milestones.filter(m => m.pct === null);
+  const usedPct = withPct.reduce((s, m) => s + m.pct, 0);
+  const remainder = withoutPct.length > 0 ? Math.max(0, (100 - usedPct) / withoutPct.length) : 0;
+  const rows = milestones.map(m => ({ ...m, pct: m.pct !== null ? m.pct : Math.round(remainder * 100) / 100 }));
 
+  const modal = document.getElementById('billingMilestonesModal');
+  const list = document.getElementById('billingMilestonesList');
+  list.innerHTML = rows.map((m, idx) => `
+    <div style="display:flex; align-items:center; gap:10px; padding:8px 4px; border-bottom:1px solid var(--border);">
+      <div style="flex:1;">
+        <div style="font-size:13.5px; font-weight:600;">${escapeHtml(m.name)}</div>
+        <div style="font-size:11.5px; color:var(--gray);">${m.date.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'})}${m.pct === null ? ' · sin % detectado en el nombre, ajústalo aquí' : ''}</div>
+      </div>
+      <input type="number" min="0" max="100" step="0.5" data-msidx="${idx}" value="${m.pct}" style="width:70px; text-align:right;"> <span style="color:var(--gray);">%</span>
+    </div>`).join('');
+  list.dataset.rows = JSON.stringify(rows.map(m => ({ taskId: m.taskId, date: m.date.toISOString() })));
+  updateBillingMilestonesTotal();
+  list.querySelectorAll('input').forEach(inp => inp.addEventListener('input', updateBillingMilestonesTotal));
+  modal.dataset.contractValue = contractValue;
+  modal.classList.add('open');
+}
+function updateBillingMilestonesTotal() {
+  const inputs = document.querySelectorAll('#billingMilestonesList input');
+  const total = Array.from(inputs).reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
+  const el = document.getElementById('billingMilestonesTotal');
+  el.textContent = `Total: ${Math.round(total * 100) / 100}%`;
+  el.style.color = Math.abs(total - 100) < 0.5 ? 'var(--green)' : 'var(--orange)';
+}
+function closeBillingMilestonesModal() { document.getElementById('billingMilestonesModal').classList.remove('open'); }
+function confirmBillingMilestones() {
+  const proj = currentProject(); if (!proj) return;
+  const modal = document.getElementById('billingMilestonesModal');
+  const contractValue = parseFloat(modal.dataset.contractValue) || 0;
+  const rowsMeta = JSON.parse(document.getElementById('billingMilestonesList').dataset.rows || '[]');
+  const inputs = document.querySelectorAll('#billingMilestonesList input');
+  const percents = {};
+  Array.from(inputs).forEach((inp, idx) => { percents[rowsMeta[idx].taskId] = parseFloat(inp.value) || 0; });
+
+  proj.budget.milestonePercents = percents;
+  proj.budget.billingMode = 'milestones';
+  applyMilestoneIngresos(proj);
+  closeBillingMilestonesModal();
+  renderBudget(); persistAll();
+  saveIndicator('Ingresos sincronizados desde hitos');
+}
+function applyMilestoneIngresos(proj) {
+  if (proj.budget.billingMode !== 'milestones' || !proj.budget.milestonePercents) return;
+  const contractValue = parseFloat(proj.budget.contractValue) || 0;
   const n = proj.budget.duracionMeses;
   const monthlyIngresos = new Array(n).fill(0);
-  let outOfRange = 0;
-  milestones.forEach(ms => {
-    const idx = monthIndexFromStart(proj.budget.startMonth, ms.date);
-    if (idx >= 0 && idx < n) monthlyIngresos[idx] += contractValue * ms.pct / 100;
-    else outOfRange++;
+  Object.entries(proj.budget.milestonePercents).forEach(([taskId, pct]) => {
+    const r = scheduleResults[taskId]; if (!r) return;
+    const idx = monthIndexFromStart(proj.budget.startMonth, r.end);
+    if (idx >= 0 && idx < n) monthlyIngresos[idx] += contractValue * pct / 100;
   });
   proj.budget.monthlyIngresos = monthlyIngresos;
-  proj.budget.billingMode = 'milestones';
-  renderBudget(); persistAll();
-  saveIndicator(outOfRange > 0 ? `Sincronizado (${outOfRange} hito(s) cayeron fuera del rango de meses configurado)` : 'Ingresos sincronizados desde hitos');
 }
 
 /* ============================================================
@@ -3079,6 +3147,8 @@ document.getElementById('btnImportPolaris').addEventListener('click', () => docu
 document.getElementById('filePolaris').addEventListener('change', (e) => { if (e.target.files[0]) { importPolarisHoursFile(e.target.files[0]); e.target.value = ''; } });
 document.getElementById('btnCancelPolaris').addEventListener('click', closePolarisProjectModal);
 document.getElementById('btnConfirmPolaris').addEventListener('click', confirmPolarisImport);
+document.getElementById('btnCancelBillingMs').addEventListener('click', closeBillingMilestonesModal);
+document.getElementById('btnConfirmBillingMs').addEventListener('click', confirmBillingMilestones);
 document.getElementById('btnToggleIngresosMes').addEventListener('click', () => {
   const panel = document.getElementById('ingresosMesPanel');
   const opening = panel.style.display === 'none';
@@ -3142,6 +3212,11 @@ document.getElementById('fileImportMspdi').addEventListener('change', (e) => { i
 document.getElementById('btnCancelExport').addEventListener('click', closeExportModal);
 document.getElementById('btnConfirmExport').addEventListener('click', doExport);
 
+let _recalcDebounceTimer = null;
+function scheduleRecalcRender(delay) {
+  clearTimeout(_recalcDebounceTimer);
+  _recalcDebounceTimer = setTimeout(() => { recalc(); withScrollPreserved(renderAll_inner); persistAll(); }, delay || 350);
+}
 function withScrollPreserved(fn) {
   const scrollX = window.scrollX, scrollY = window.scrollY;
   const active = document.activeElement;
