@@ -133,6 +133,7 @@
     <div style="display:flex; align-items:center; gap:14px;">
       <span class="save-indicator" id="storageModeIndicator"></span>
       <span class="save-indicator" id="saveIndicator"></span>
+      <button class="btn btn-ghost btn-xs" id="btnOpenTarifario" title="Tarifas de personas, guardadas una sola vez para todos los proyectos">💵 Tarifario</button>
       <div style="position:relative;">
         <button class="btn btn-ghost btn-xs" id="btnBell" style="font-size:16px; padding:6px 10px; position:relative;">
           🔔<span id="bellBadge" style="display:none; position:absolute; top:-4px; right:-4px; background:var(--red); color:#fff; border-radius:10px; font-size:10px; padding:1px 5px; font-weight:700;"></span>
@@ -141,6 +142,7 @@
       </div>
     </div>
   </header>
+  <div id="fileProtocolWarning" style="display:none; background:#FDECEA; border:1px solid var(--red); color:#7A2E27; padding:10px 16px; border-radius:8px; margin:0 0 14px 0; font-size:13px;"></div>
 
   <div id="urgentBanner" style="display:none;"></div>
 
@@ -149,6 +151,8 @@
   <div class="view-tabs">
     <button class="view-tab-btn active" id="viewTabCronograma" data-view="cronograma">📅 Cronograma</button>
     <button class="view-tab-btn" id="viewTabCostos" data-view="costos">💰 Presupuesto y costos</button>
+    <button class="view-tab-btn" id="viewTabComercial" data-view="comercial">💼 Presupuesto Comercial</button>
+    <button class="view-tab-btn" id="viewTabAnalytics" data-view="analytics">📊 Analíticas PMO</button>
   </div>
 
   <div class="card">
@@ -159,6 +163,7 @@
       <button class="btn btn-ghost" id="btnClientMode">🙈 Modo cliente (ocultar costos)</button>
       <button class="btn btn-accent" id="btnBaseline">Guardar línea base</button>
       <button class="btn btn-ghost" id="btnClearBaseline">Quitar línea base</button>
+      <button class="btn btn-ghost" id="btnBaselineHistory">📜 Historial de líneas base</button>
       <button class="btn btn-primary" id="btnExportPdf">📄 Exportar PDF</button>
       <button class="btn btn-ghost" id="btnExportMspdi">🗂️ Exportar a MS Project (.xml)</button>
       <button class="btn btn-primary" id="btnExportTasksExcel">📊 Exportar cronograma a Excel</button>
@@ -226,6 +231,7 @@ Fase 2: Migración
     <div class="toolbar" style="margin-bottom:10px; align-items:flex-end;">
       <div class="field"><label>Buscar (nombre/responsable)</label><input type="text" id="filterText" placeholder="Ej. migración" style="width:180px;"></div>
       <div class="field"><label>Responsable</label><select id="filterResource" style="min-width:160px;"><option value="">Todos</option></select></div>
+      <div class="field"><label>Fase</label><select id="filterFase" style="min-width:180px;"><option value="">Todas</option></select></div>
       <div class="field"><label>Estado</label><select id="filterEstado" style="min-width:140px;">
         <option value="">Todos</option>
         <option value="Fase">Fase</option>
@@ -238,6 +244,8 @@ Fase 2: Migración
       <div class="field"><label>% Avance real (min-max)</label><div style="display:flex; gap:4px;"><input type="number" id="filterAvanceMin" min="0" max="100" placeholder="0" style="width:55px;"><input type="number" id="filterAvanceMax" min="0" max="100" placeholder="100" style="width:55px;"></div></div>
       <div class="field"><label>% Asignación (min-max)</label><div style="display:flex; gap:4px;"><input type="number" id="filterAsignMin" min="0" max="100" placeholder="0" style="width:55px;"><input type="number" id="filterAsignMax" min="0" max="100" placeholder="100" style="width:55px;"></div></div>
       <button class="btn btn-ghost" id="btnClearFilters">✕ Limpiar filtros</button>
+      <button class="btn btn-ghost" id="btnCollapseAllPhases" title="Ver solo las fases (ocultar todas las tareas)">▶ Ver solo fases</button>
+      <button class="btn btn-ghost" id="btnExpandAllPhases" title="Ver todas las fases con sus tareas">▼ Ver todo</button>
       <span class="save-indicator" id="filterCount"></span>
     </div>
     <div style="overflow-x:auto;">
@@ -289,8 +297,8 @@ Fase 2: Migración
       <button class="btn btn-accent" id="btnSyncIngresosFromMilestones">🔗 Sincronizar ingresos desde hitos del cronograma</button>
       <button class="btn btn-accent" id="btnSyncFromSchedule">🔗 Sincronizar horas planeadas desde el cronograma</button>
       <button class="btn btn-ghost" id="btnSyncRealFromSchedule">🔗 Sincronizar horas reales desde el avance</button>
-      <button class="btn btn-accent" id="btnImportPolaris">⏱️ Importar horas reales desde reporte</button>
-      <input type="file" id="filePolaris" accept=".xlsx,.xls" style="display:none;">
+      <button class="btn btn-accent" id="btnImportFollowUp">⏱️ Importar horas reales desde reporte</button>
+      <input type="file" id="fileFollowUp" accept=".xlsx,.xls" style="display:none;">
       <button class="btn btn-ghost" id="btnImportBudgetExcel">📥 Importar desde Excel</button>
       <button class="btn btn-primary" id="btnExportBudgetExcel">📊 Exportar a Excel</button>
       <input type="file" id="fileImportBudgetExcel" accept=".xlsx,.xls" style="display:none;">
@@ -325,6 +333,26 @@ Fase 2: Migración
     <div class="add-row"><button class="btn btn-ghost" id="btnAddResource">+ Agregar recurso</button></div>
   </div>
   </div><!-- /viewCostos -->
+
+  <div id="viewComercial" style="display:none;">
+    <div class="card">
+      <p class="section-title"><span class="n">💼</span>Presupuesto Comercial</p>
+      <p class="hint" style="margin-top:0;">
+        Sube aquí el mismo Excel de presupuesto que te entrega el equipo comercial (tiene el mismo formato que el de "Presupuesto y costos"). Queda guardado como <b>referencia fija</b> — no se recalcula con el cronograma — para comparar contra lo que realmente se está ejecutando en la pestaña "💰 Presupuesto y costos".
+      </p>
+      <div class="toolbar" style="margin-bottom:10px;">
+        <button class="btn btn-accent" id="btnImportComercial">📥 Importar Excel de comercial</button>
+        <input type="file" id="fileImportComercial" accept=".xlsx,.xls" style="display:none;">
+        <button class="btn btn-ghost" id="btnClearComercial">🗑️ Quitar presupuesto comercial</button>
+        <button class="btn btn-primary" id="btnExportComercial">📊 Exportar a Excel</button>
+      </div>
+      <div id="comercialContent"></div>
+    </div>
+  </div><!-- /viewComercial -->
+
+  <div id="viewAnalytics" style="display:none;">
+    <div id="analyticsContent"></div>
+  </div><!-- /viewAnalytics -->
 
   <div id="viewCronograma2">
 
@@ -383,14 +411,43 @@ Fase 2: Migración
   </div>
 </div>
 
-<div class="modal-overlay" id="polarisProjectModal">
-  <div class="modal-box">
-    <h2>¿Qué proyecto(s) de Polaris corresponden a este cronograma?</h2>
-    <p class="hint2">El reporte trae registros de todos los clientes de ICX. Marca cuáles nombres corresponden a este proyecto (puede ser más de uno, ej. si el cliente tiene "Evolutivos" y "Soporte" por separado).</p>
-    <div id="polarisProjectList" style="max-height:260px; overflow-y:auto; margin:10px 0; border:1px solid var(--border); border-radius:8px; padding:8px 12px;"></div>
+<div class="modal-overlay" id="baselineHistoryModal">
+  <div class="modal-box" style="width:520px;">
+    <h2>📜 Historial de líneas base</h2>
+    <p class="hint2">Cada vez que guardas una línea base queda registrada aquí. La marcada como <b>Activa</b> es la que se compara contra el cronograma actual (barras fantasma en el Gantt).</p>
+    <div id="baselineHistoryList" style="max-height:340px; overflow-y:auto; margin:10px 0;"></div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" id="btnCancelPolaris">Cancelar</button>
-      <button class="btn btn-accent" id="btnConfirmPolaris">Traer horas reales</button>
+      <button class="btn btn-ghost" id="btnCloseBaselineHistory">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="tarifarioModal">
+  <div class="modal-box" style="width:560px;">
+    <h2>💵 Tarifario</h2>
+    <p class="hint2">
+      Nombre → tarifa por hora. <b>Ya viene incluido en la herramienta</b> — nadie tiene que importar nada para que funcione. Se usa para autocompletar la tarifa en <b>cualquier proyecto</b>, en Presupuesto y en Presupuesto Comercial. Si necesitas actualizarlo o agregar a alguien, hazlo aquí — tus cambios quedan guardados en este navegador y tienen prioridad sobre la lista base.
+    </p>
+    <div class="toolbar" style="margin:10px 0;">
+      <button class="btn btn-accent btn-xs" id="btnImportTarifario">📥 Importar desde Excel</button>
+      <input type="file" id="fileImportTarifario" accept=".xlsx,.xls" style="display:none;">
+      <button class="btn btn-ghost btn-xs" id="btnAddTarifaRow">+ Agregar manualmente</button>
+    </div>
+    <div id="tarifarioList" style="max-height:340px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:6px 10px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCloseTarifario">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="followupProjectModal">
+  <div class="modal-box">
+    <h2>¿Qué proyecto(s) de FollowUp corresponden a este cronograma?</h2>
+    <p class="hint2">El reporte trae registros de todos los clientes de ICX. Marca cuáles nombres corresponden a este proyecto (puede ser más de uno, ej. si el cliente tiene "Evolutivos" y "Soporte" por separado).</p>
+    <div id="followupProjectList" style="max-height:260px; overflow-y:auto; margin:10px 0; border:1px solid var(--border); border-radius:8px; padding:8px 12px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCancelFollowUp">Cancelar</button>
+      <button class="btn btn-accent" id="btnConfirmFollowUp">Traer horas reales</button>
     </div>
   </div>
 </div>
@@ -665,7 +722,12 @@ async function storageSet(key, value) {
   localStorage.setItem(key, value); return { key, value };
 }
 
-let state = { projects: [], currentId: null };
+/* Tarifario base incluido en la herramienta (nombre -> valor por hora).
+   Cualquier persona que abra esta página ya lo tiene, sin importar nada.
+   Se puede ajustar/ampliar desde el botón "💵 Tarifario" — lo que edites
+   ahí queda guardado en tu navegador y tiene prioridad sobre esta lista base. */
+const DEFAULT_TARIFARIO = [{"name": "Dario Valderrama", "rate": 184000.0}, {"name": "Edisson Zarate", "rate": 183000.0}, {"name": "Jhamir Castiblanco", "rate": 114000.0}, {"name": "Leidy Ospina", "rate": 135000.0}, {"name": "Camilo Andrés Peña", "rate": 82000.0}, {"name": "Laura Garzón", "rate": 78000.0}, {"name": "Jeisson Rojas", "rate": 75000.0}, {"name": "Alejandra Linares", "rate": 63000.0}, {"name": "Daniela Valcarcel", "rate": 61000.0}, {"name": "Laura Arias", "rate": 61000.0}, {"name": "Viviana Cadena", "rate": 69000.0}, {"name": "Catherine Urbina", "rate": 59000.0}, {"name": "Jessica Botello", "rate": 61000.0}, {"name": "Manuel Rubio", "rate": 54000.0}, {"name": "Alex Parada", "rate": 52000.0}, {"name": "Joan Rodríguez", "rate": 53000.0}, {"name": "Felipe Prado", "rate": 50000.0}, {"name": "Katerin Sanchez", "rate": 45000.0}, {"name": "María Paula Umbarila Barajas", "rate": 44000.0}, {"name": "Maria Alejandra Perez", "rate": 47000.0}, {"name": "Julian Castro", "rate": 43000.0}, {"name": "Sergio Mejía", "rate": 43000.0}, {"name": "Erika Aldana", "rate": 43000.0}, {"name": "Juan Camilo Larrota Ruiz", "rate": 43000.0}, {"name": "Santiago Zarate", "rate": 40000.0}, {"name": "Daniel Forero", "rate": 40000.0}, {"name": "Geraldine Sánchez", "rate": 43000.0}, {"name": "Alejandra Suárez", "rate": 42000.0}, {"name": "Alexandra Murcia", "rate": 40000.0}, {"name": "Sebastián Villamil", "rate": 37000.0}, {"name": "Natalia Pérez", "rate": 36000.0}, {"name": "Susana Pérez", "rate": 38000.0}, {"name": "Jhams Castiblanco", "rate": 33000.0}, {"name": "Johnatan Culma", "rate": 19000.0}, {"name": "Cristian Caro", "rate": 25000.0}, {"name": "Michael Varón", "rate": 25000.0}, {"name": "Miller Bautista", "rate": 52000.0}, {"name": "Alexa Britto", "rate": 39000.0}, {"name": "Johana Espitia", "rate": 30000.0}, {"name": "Camila Cano", "rate": 51000.0}, {"name": "Andres Salgado", "rate": 40000.0}, {"name": "Jennifer Riaño", "rate": 34000.0}];
+let state = { projects: [], currentId: null, tarifario: [] };
 const uid = () => 'p_' + Math.random().toString(36).slice(2, 9);
 const taskUid = () => 't_' + Math.random().toString(36).slice(2, 9);
 
@@ -732,6 +794,7 @@ function normalizeProject(p) {
   while (p.budget.monthlyIngresos.length < p.budget.duracionMeses) p.budget.monthlyIngresos.push(0);
   p.budget.monthlyIngresos.length = p.budget.duracionMeses;
   p.budget.commissionPct = parseFloat(p.budget.commissionPct) || 0;
+  p.budget.commissionBase = p.budget.commissionBase === 'contrato' ? 'contrato' : 'ingresos';
   p.budget.indirectCosts = p.budget.indirectCosts || [];
   p.budget.indirectCosts.forEach(ic => {
     ic.monthlyValues = ic.monthlyValues || [];
@@ -744,6 +807,9 @@ function normalizeProject(p) {
     while (r.monthlyHours.length < p.budget.duracionMeses) r.monthlyHours.push(0);
     while (r.monthlyHoursReal.length < p.budget.duracionMeses) r.monthlyHoursReal.push(0);
   });
+  p.commercialBudget = p.commercialBudget || null;
+  p.baselines = p.baselines || [];
+  p.activeBaselineId = p.activeBaselineId || null;
   return p;
 }
 function currentProject() { return state.projects.find(p => p.id === state.currentId); }
@@ -768,6 +834,129 @@ async function persistAll() {
     console.error('Error al guardar:', e);
     saveIndicator('⚠️ No se pudo guardar: ' + (e && e.message ? e.message : e), true);
   }
+}
+async function persistTarifario() {
+  try {
+    const r = await storageSet('cronogramas2:tarifario', JSON.stringify(state.tarifario));
+    if (!r) throw new Error('No se pudo guardar el tarifario (¿modo incógnito, o localStorage bloqueado/lleno?)');
+    saveIndicator('Tarifario guardado');
+  } catch (e) {
+    console.error('Error al guardar tarifario:', e);
+    saveIndicator('⚠️ No se pudo guardar el tarifario: ' + (e && e.message ? e.message : e), true);
+  }
+}
+async function loadTarifario() {
+  try {
+    const r = await storageGet('cronogramas2:tarifario');
+    if (r) { state.tarifario = JSON.parse(r.value) || []; return; }
+  } catch (e) { console.error(e); }
+  // Nadie ha guardado ajustes propios todavía en este navegador: partir del
+  // tarifario base incluido en la herramienta (nadie tiene que importar nada).
+  state.tarifario = DEFAULT_TARIFARIO.map(t => ({ ...t }));
+}
+function findTarifarioRate(name) {
+  if (!name) return null;
+  const key = name.trim().toLowerCase();
+  const entry = state.tarifario.find(t => t.name.trim().toLowerCase() === key);
+  return entry ? parseFloat(entry.rate) || null : null;
+}
+function openTarifarioModal() { renderTarifarioModal(); document.getElementById('tarifarioModal').classList.add('open'); }
+function closeTarifarioModal() { document.getElementById('tarifarioModal').classList.remove('open'); }
+function openBaselineHistoryModal() {
+  const proj = currentProject();
+  const list = document.getElementById('baselineHistoryList');
+  const baselines = (proj && proj.baselines) || [];
+  if (baselines.length === 0) {
+    list.innerHTML = `<div class="empty-state" style="padding:16px;">Todavía no has guardado ninguna línea base para este proyecto. Usa "Guardar línea base" arriba.</div>`;
+  } else {
+    list.innerHTML = [...baselines].reverse().map(b => {
+      const isActive = proj.activeBaselineId === b.id;
+      const fecha = new Date(b.savedAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      return `<div style="display:flex; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--border);">
+        <div style="flex:1;">
+          <div style="font-size:13.5px; font-weight:600;">${escapeHtml(b.label)} ${isActive ? '<span class="badge badge-ok" style="margin-left:6px;">Activa</span>' : ''}</div>
+          <div style="font-size:11.5px; color:var(--gray);">Guardada el ${fecha}</div>
+        </div>
+        ${!isActive ? `<button class="btn btn-ghost btn-xs" data-act="activateBaseline" data-blid="${b.id}">Activar</button>` : ''}
+        <button class="indent-btn" data-act="delBaseline" data-blid="${b.id}" title="Eliminar">🗑</button>
+      </div>`;
+    }).join('');
+    list.querySelectorAll('[data-act="activateBaseline"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const b = proj.baselines.find(x => x.id === btn.dataset.blid);
+        if (b) { proj.baseline = b.snapshot; proj.activeBaselineId = b.id; renderAll_inner(); persistAll(); openBaselineHistoryModal(); }
+      });
+    });
+    list.querySelectorAll('[data-act="delBaseline"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!confirm('¿Eliminar esta línea base del historial? No se puede deshacer.')) return;
+        proj.baselines = proj.baselines.filter(x => x.id !== btn.dataset.blid);
+        if (proj.activeBaselineId === btn.dataset.blid) { proj.baseline = null; proj.activeBaselineId = null; }
+        renderAll_inner(); persistAll(); openBaselineHistoryModal();
+      });
+    });
+  }
+  document.getElementById('baselineHistoryModal').classList.add('open');
+}
+function renderTarifarioModal() {
+  const list = document.getElementById('tarifarioList');
+  if (state.tarifario.length === 0) {
+    list.innerHTML = `<div class="empty-state" style="padding:16px;">Todavía no has importado ningún tarifario. Usa "Importar desde Excel" o agrega personas manualmente.</div>`;
+    return;
+  }
+  list.innerHTML = state.tarifario.map((t, idx) => `
+    <div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border);">
+      <input type="text" data-tarifield="name" data-taridx="${idx}" value="${escapeHtml(t.name || '')}" placeholder="Nombre" style="flex:1;">
+      <input type="number" min="0" data-tarifield="rate" data-taridx="${idx}" value="${t.rate || ''}" placeholder="Valor/hora" style="width:120px;">
+      <button class="indent-btn" data-act="delTarifa" data-taridx="${idx}" title="Eliminar">🗑</button>
+    </div>`).join('');
+  list.querySelectorAll('[data-tarifield]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const idx = parseInt(inp.dataset.taridx);
+      state.tarifario[idx][inp.dataset.tarifield] = inp.value;
+      persistTarifario();
+    });
+  });
+  list.querySelectorAll('[data-act="delTarifa"]').forEach(btn => {
+    btn.addEventListener('click', () => { state.tarifario.splice(parseInt(btn.dataset.taridx), 1); renderTarifarioModal(); persistTarifario(); });
+  });
+}
+function importTarifarioFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      let added = 0, updated = 0;
+      const tarifaSheetNames = wb.SheetNames.filter(sn => /tarifa/i.test(sn));
+      const sheetsToScan = tarifaSheetNames.length > 0 ? tarifaSheetNames : wb.SheetNames;
+      for (const sheetName of sheetsToScan) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null });
+        const headerRowIdx = rows.findIndex(r => r && r.some(c => c && /nombre|recurso|colaborador|consultor|persona/i.test(String(c))));
+        if (headerRowIdx < 0) continue;
+        const header = rows[headerRowIdx];
+        const nameCol = header.findIndex(c => c && /nombre|recurso|colaborador|consultor|persona/i.test(String(c)));
+        let rateCol = header.findIndex(c => c && /valor.*hora|tarifa|rate/i.test(String(c)));
+        if (rateCol < 0) rateCol = header.findIndex(c => c && /^valor$/i.test(String(c).trim()));
+        if (nameCol < 0 || rateCol < 0) continue;
+        for (let i = headerRowIdx + 1; i < rows.length; i++) {
+          const r = rows[i]; if (!r || !r[nameCol]) continue;
+          const name = String(r[nameCol]).trim();
+          const rate = parseFloat(r[rateCol]);
+          if (!name || isNaN(rate)) continue;
+          const existing = state.tarifario.find(t => t.name.trim().toLowerCase() === name.toLowerCase());
+          if (existing) { existing.rate = rate; updated++; } else { state.tarifario.push({ name, rate }); added++; }
+        }
+        break;
+      }
+      if (added === 0 && updated === 0) { alert('No se reconoció el formato. Se espera una hoja con columnas de nombre (Nombre/Recurso/Colaborador) y tarifa (Valor por hora/Tarifa).'); return; }
+      renderTarifarioModal(); persistTarifario();
+      alert(`Tarifario actualizado: ${added} persona(s) nueva(s), ${updated} tarifa(s) actualizada(s).`);
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo leer el archivo: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 async function loadAll() {
   try {
@@ -892,7 +1081,8 @@ function renderToolbar() {
   const nameInput = document.getElementById('projectName'); const startInput = document.getElementById('projectStart');
   if (!proj) { nameInput.value = ''; startInput.value = ''; return; }
   nameInput.value = proj.name; startInput.value = proj.start;
-  document.getElementById('baselineInfo').textContent = proj.baseline ? 'Línea base guardada' : 'Sin línea base';
+  const activeBl = proj.baselines && proj.baselines.find(b => b.id === proj.activeBaselineId);
+  document.getElementById('baselineInfo').textContent = proj.baseline ? `Activa: ${activeBl ? activeBl.label : 'línea base'}` : 'Sin línea base';
   document.body.classList.toggle('client-mode', !!proj.clientMode);
   const btnClient = document.getElementById('btnClientMode');
   btnClient.textContent = proj.clientMode ? '👁️ Modo cliente: activado (sin costos)' : '🙈 Modo cliente (ocultar costos)';
@@ -963,10 +1153,17 @@ function computeTaskEstado(t, r, isPhase) {
 /* ============================================================
    FILTROS DE LA TABLA DE TAREAS
    ============================================================ */
-let taskFilters = { text: '', resource: '', estado: '', avanceMin: '', avanceMax: '', asignMin: '', asignMax: '' };
+let taskFilters = { text: '', resource: '', estado: '', fase: '', avanceMin: '', avanceMax: '', asignMin: '', asignMax: '' };
+let collapsedPhaseIds = new Set();
 function filtersActive() {
   const f = taskFilters;
-  return !!(f.text || f.resource || f.estado || f.avanceMin !== '' || f.avanceMax !== '' || f.asignMin !== '' || f.asignMax !== '');
+  return !!(f.text || f.resource || f.estado || f.fase || f.avanceMin !== '' || f.avanceMax !== '' || f.asignMin !== '' || f.asignMax !== '');
+}
+function getSubtreeIds(proj, rootId) {
+  const ids = new Set([rootId]);
+  const addChildren = (id) => { proj.tasks.filter(t => t.parentId === id).forEach(c => { ids.add(c.id); addChildren(c.id); }); };
+  addChildren(rootId);
+  return ids;
 }
 function taskDirectlyMatches(proj, t, r, isPhase) {
   const f = taskFilters;
@@ -999,7 +1196,22 @@ function computeVisibleTaskIds(proj) {
   const parentOf = {}; proj.tasks.forEach(t => parentOf[t.id] = t.parentId);
   const markAncestors = (id) => { let p = parentOf[id]; while (p) { idSet.add(p); p = parentOf[p]; } };
   const markDescendants = (id) => { proj.tasks.filter(t => t.parentId === id).forEach(c => { idSet.add(c.id); markDescendants(c.id); }); };
-  proj.tasks.forEach(t => {
+
+  let candidateTasks = proj.tasks;
+  let phaseSubtree = null;
+  if (taskFilters.fase && proj.tasks.some(t => t.id === taskFilters.fase)) {
+    phaseSubtree = getSubtreeIds(proj, taskFilters.fase);
+    candidateTasks = proj.tasks.filter(t => phaseSubtree.has(t.id));
+  }
+
+  const otherFiltersActive = !!(taskFilters.text || taskFilters.resource || taskFilters.estado || taskFilters.avanceMin !== '' || taskFilters.avanceMax !== '' || taskFilters.asignMin !== '' || taskFilters.asignMax !== '');
+  if (phaseSubtree && !otherFiltersActive) {
+    phaseSubtree.forEach(id => idSet.add(id));
+    markAncestors(taskFilters.fase);
+    return idSet;
+  }
+
+  candidateTasks.forEach(t => {
     const isPhase = !!hasChildrenGlobal[t.id];
     const r = scheduleResults[t.id];
     if (taskDirectlyMatches(proj, t, r, isPhase)) {
@@ -1014,6 +1226,9 @@ function renderFilterControls(proj) {
   const names = proj.resources.map(r => r.name).filter(Boolean);
   const current = taskFilters.resource;
   resSelect.innerHTML = '<option value="">Todos</option>' + names.map(n => `<option value="${escapeHtml(n)}" ${n === current ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('');
+  const faseSelect = document.getElementById('filterFase');
+  const phaseTasks = proj.tasks.filter(t => hasChildrenGlobal[t.id]);
+  faseSelect.innerHTML = '<option value="">Todas</option>' + phaseTasks.map(t => `<option value="${t.id}" ${t.id === taskFilters.fase ? 'selected' : ''}>${escapeHtml(wbsMapGlobal[t.id] || '')} ${escapeHtml(t.name || '(sin nombre)')}</option>`).join('');
   const textEl = document.getElementById('filterText');
   if (document.activeElement !== textEl) textEl.value = taskFilters.text;
   document.getElementById('filterEstado').value = taskFilters.estado;
@@ -1059,6 +1274,7 @@ function wireTaskEditPanel(editTr, proj, t) {
     inp.addEventListener(evName, () => {
       if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; }
       else if (field === 'manualStart') { t.manualStart = inp.value; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
+      else if (field === 'predText') { t.predText = inp.value; t.manualStart = ''; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
       else t[field] = inp.value;
       if (evName === 'change') { recalc(); withScrollPreserved(renderAll_inner); persistAll(); } else { scheduleRecalcRender(); }
     });
@@ -1128,14 +1344,19 @@ function renderTaskTable() {
   }
   const order = flatOrder(proj);
   const wbsLookup = wbsMapGlobal;
-  const resourceNames = proj.resources.map(r => r.name).filter(Boolean);
+  const resourceNamesSet = new Set(proj.resources.map(r => r.name).filter(Boolean));
+  state.tarifario.forEach(t => { if (t.name) resourceNamesSet.add(t.name); });
+  const resourceNames = Array.from(resourceNamesSet).sort((a, b) => a.localeCompare(b, 'es'));
   renderFilterControls(proj);
   const visibleIds = computeVisibleTaskIds(proj);
+  const parentOfMap = {}; proj.tasks.forEach(x => parentOfMap[x.id] = x.parentId);
+  const isCollapsedByAncestor = (taskId) => { let p = parentOfMap[taskId]; while (p) { if (collapsedPhaseIds.has(p)) return true; p = parentOfMap[p]; } return false; };
   let shownCount = 0, totalCount = 0;
 
   order.forEach(({ task: t, depth }) => {
     const isPhase = !!hasChildrenGlobal[t.id];
     const r = scheduleResults[t.id];
+    if (isCollapsedByAncestor(t.id)) return;
     totalCount++;
     if (visibleIds && !visibleIds.has(t.id)) return;
     shownCount++;
@@ -1148,6 +1369,7 @@ function renderTaskTable() {
       <td class="wbs-tag">${wbs}</td>
       <td>
         <div class="task-name-cell" style="padding-left:${depth * 16}px;">
+          ${isPhase ? `<button class="indent-btn" data-act="collapsePhase" title="${collapsedPhaseIds.has(t.id) ? 'Mostrar las tareas de esta fase' : 'Ocultar las tareas de esta fase (ver solo la fase)'}" style="background:${collapsedPhaseIds.has(t.id) ? 'var(--navy)' : '#fff'}; color:${collapsedPhaseIds.has(t.id) ? '#fff' : 'var(--navy)'};">${collapsedPhaseIds.has(t.id) ? '▶' : '▼'}</button>` : ''}
           <div class="indent-controls">
             <button class="indent-btn" data-act="expand" title="Editar en panel ampliado" style="background:${expandedTaskIds.has(t.id) ? 'var(--orange)' : '#fff'}; color:${expandedTaskIds.has(t.id) ? '#fff' : 'var(--gray)'};">${expandedTaskIds.has(t.id) ? '▲' : '✎'}</button>
             <button class="indent-btn" data-act="up" title="Mover arriba">↑</button>
@@ -1221,14 +1443,27 @@ function renderTaskTable() {
           const name = prompt('Nombre del nuevo recurso:');
           if (name && name.trim()) {
             const trimmed = name.trim();
-            if (!proj.resources.some(rr => rr.name.trim().toLowerCase() === trimmed.toLowerCase())) proj.resources.push({ name: trimmed, rate: 0 });
+            if (!proj.resources.some(rr => rr.name.trim().toLowerCase() === trimmed.toLowerCase())) {
+              const tarRate = findTarifarioRate(trimmed);
+              proj.resources.push({ name: trimmed, rate: tarRate ? Math.round(tarRate * (proj.hoursPerDay || 8)) : 0 });
+            }
             t.resource = trimmed;
           } else {
             inp.value = t.resource || '';
             return;
           }
+        } else if (field === 'resource') {
+          // Si eligió a alguien que está en el Tarifario pero todavía no es un
+          // "recurso" registrado en este proyecto, lo registramos solo, con su
+          // tarifa — así aparece también en "Recursos y costos" sin pasos extra.
+          if (inp.value && !proj.resources.some(rr => rr.name.trim().toLowerCase() === inp.value.trim().toLowerCase())) {
+            const tarRate = findTarifarioRate(inp.value);
+            proj.resources.push({ name: inp.value, rate: tarRate ? Math.round(tarRate * (proj.hoursPerDay || 8)) : 0 });
+          }
+          t.resource = inp.value;
         } else if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; }
         else if (field === 'manualStart') { t.manualStart = inp.value; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
+        else if (field === 'predText') { t.predText = inp.value; t.manualStart = ''; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
         else t[field] = inp.type === 'checkbox' ? inp.checked : inp.value;
         if (evName === 'change') { recalc(); withScrollPreserved(renderAll_inner); persistAll(); } else { scheduleRecalcRender(); }
       });
@@ -1250,6 +1485,11 @@ function renderTaskTable() {
     });
     tr.querySelector('[data-act="expand"]').addEventListener('click', () => {
       if (expandedTaskIds.has(t.id)) expandedTaskIds.delete(t.id); else expandedTaskIds.add(t.id);
+      renderTaskTable();
+    });
+    const collapseBtn = tr.querySelector('[data-act="collapsePhase"]');
+    if (collapseBtn) collapseBtn.addEventListener('click', () => {
+      if (collapsedPhaseIds.has(t.id)) collapsedPhaseIds.delete(t.id); else collapsedPhaseIds.add(t.id);
       renderTaskTable();
     });
     tr.addEventListener('click', (e) => {
@@ -1331,6 +1571,10 @@ function renderResources() {
             const oldKey = oldName.trim().toLowerCase();
             proj.tasks.forEach(tt => { if ((tt.resource || '').trim().toLowerCase() === oldKey) tt.resource = newName; });
             proj.budget.roles.forEach(rr => { if ((rr.name || '').trim().toLowerCase() === oldKey) rr.name = newName; });
+          }
+          if (!res.rate || parseFloat(res.rate) === 0) {
+            const tarRate = findTarifarioRate(newName);
+            if (tarRate) res.rate = Math.round(tarRate * (proj.hoursPerDay || 8));
           }
         }
         res[field] = inp.value; scheduleRecalcRender();
@@ -2212,7 +2456,8 @@ function syncRealHoursFromSchedule() {
     let role = proj.budget.roles.find(rr => rr.name.trim().toLowerCase() === name.toLowerCase());
     if (!role) {
       const resMatch = proj.resources.find(rr => rr.name.trim().toLowerCase() === name.toLowerCase());
-      const rateHour = resMatch ? (parseFloat(resMatch.rate) || 0) / (proj.hoursPerDay || 8) : '';
+      const tarRate = findTarifarioRate(name);
+      const rateHour = tarRate ? tarRate : (resMatch ? (parseFloat(resMatch.rate) || 0) / (proj.hoursPerDay || 8) : '');
       role = { name, occupancyPct: '', rate: rateHour, monthlyHours: new Array(n).fill(0), monthlyHoursReal: [] };
       proj.budget.roles.push(role);
     }
@@ -2248,7 +2493,8 @@ function syncBudgetFromSchedule() {
     let role = proj.budget.roles.find(rr => rr.name.trim().toLowerCase() === name.toLowerCase());
     if (!role) {
       const resMatch = proj.resources.find(rr => rr.name.trim().toLowerCase() === name.toLowerCase());
-      const rateHour = resMatch ? (parseFloat(resMatch.rate) || 0) / (proj.hoursPerDay || 8) : '';
+      const tarRate = findTarifarioRate(name);
+      const rateHour = tarRate ? tarRate : (resMatch ? (parseFloat(resMatch.rate) || 0) / (proj.hoursPerDay || 8) : '');
       role = { name, occupancyPct: '', rate: rateHour, monthlyHours: [], monthlyHoursReal: [] };
       proj.budget.roles.push(role);
     }
@@ -2350,7 +2596,18 @@ function renderBudget() {
     `;
     tr.querySelectorAll('input[data-field]').forEach(inp => {
       const field = inp.dataset.field;
-      inp.addEventListener('input', () => { role[field] = inp.value; withScrollPreserved(renderBudget); persistAll(); });
+      inp.addEventListener('input', () => {
+        role[field] = inp.value;
+        if (field === 'name' && (!role.rate || parseFloat(role.rate) === 0)) {
+          const tarRate = findTarifarioRate(inp.value);
+          if (tarRate) { role.rate = tarRate; }
+          else {
+            const match = proj.resources.find(rr => rr.name.trim().toLowerCase() === inp.value.trim().toLowerCase());
+            if (match && parseFloat(match.rate) > 0) role.rate = Math.round((parseFloat(match.rate) / (proj.hoursPerDay || 8)) * 100) / 100;
+          }
+        }
+        withScrollPreserved(renderBudget); persistAll();
+      });
     });
     tr.querySelector('[data-act="toggleRole"]').addEventListener('click', () => {
       if (expandedRoleIds.has(idx)) expandedRoleIds.delete(idx); else expandedRoleIds.add(idx);
@@ -2384,17 +2641,24 @@ function renderBudget() {
 
   const ingresosTotales = totalIngresosPlan;
   const totalIndirectos = proj.budget.indirectCosts.reduce((s, ic) => s + ic.monthlyValues.reduce((s2, v) => s2 + (parseFloat(v) || 0), 0), 0);
-  const comisionValor = ingresosTotales * (proj.budget.commissionPct / 100);
+  const comisionBaseValor = proj.budget.commissionBase === 'contrato' ? (parseFloat(proj.budget.contractValue) || 0) : ingresosTotales;
+  const comisionValor = comisionBaseValor * (proj.budget.commissionPct / 100);
   const otrosCostos = totalIndirectos + comisionValor;
   const utilidadPlan = ingresosTotales - grandPlanCost - otrosCostos;
   const utilidadReal = ingresosTotales - grandRealCost - otrosCostos;
   const rentPlan = ingresosTotales > 0 ? Math.round((utilidadPlan / ingresosTotales) * 1000) / 10 : 0;
   const rentReal = ingresosTotales > 0 ? Math.round((utilidadReal / ingresosTotales) * 1000) / 10 : 0;
   const ejecucion = grandPlanHours > 0 ? Math.round((grandRealHours / grandPlanHours) * 1000) / 10 : 0;
+  const today = new Date();
+  const startIdx = monthKeyToIdx(proj.budget.startMonth || (today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0')));
+  const todayIdx = today.getFullYear() * 12 + today.getMonth();
+  const mesesEjecutados = Math.max(0, Math.min(n, todayIdx - startIdx + 1));
+  const ingresoEjecutado = proj.budget.monthlyIngresos.slice(0, mesesEjecutados).reduce((s, v) => s + (parseFloat(v) || 0), 0);
   summary.innerHTML = `
     <div class="cost-box cost-col"><div class="k">Ingresos totales (${n} meses)</div><div class="v">${ingresosTotales.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
+    <div class="cost-box cost-col" title="Suma de los ingresos de los meses que ya transcurrieron (${mesesEjecutados} de ${n})"><div class="k">Ingreso ejecutado a hoy</div><div class="v">${ingresoEjecutado.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
     <div class="cost-box cost-col"><div class="k">Costo total proyectado (${grandPlanHours}h)</div><div class="v">${grandPlanCost.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
-    <div class="cost-box cost-col" title="${proj.budget.commissionPct || 0}% sobre los ingresos totales"><div class="k">Comisión de venta (${proj.budget.commissionPct || 0}%)</div><div class="v">${comisionValor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
+    <div class="cost-box cost-col" title="${proj.budget.commissionPct || 0}% sobre ${proj.budget.commissionBase === 'contrato' ? 'el valor del contrato' : 'los ingresos totales'}"><div class="k">Comisión de venta (${proj.budget.commissionPct || 0}%)</div><div class="v">${comisionValor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
     <div class="cost-box cost-col" title="${proj.budget.indirectCosts.map(ic=>ic.name||'(sin nombre)').join(', ') || 'Ninguno agregado todavía'}"><div class="k">Costos indirectos (pólizas, etc.)</div><div class="v">${totalIndirectos.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
     <div class="cost-box cost-col"><div class="k">Rentabilidad proyectada</div><div class="v" style="color:${rentPlan>=0?'var(--green)':'var(--red)'};">${rentPlan}%</div></div>
     <div class="cost-box cost-col"><div class="k">Costo real a hoy (${grandRealHours}h)</div><div class="v">${grandRealCost.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
@@ -2418,15 +2682,34 @@ function renderBudget() {
 }
 function renderIndirectCostsPanel(proj, n) {
   const panel = document.getElementById('indirectosPanel');
-  let html = `<div style="margin-bottom:10px;"><label style="font-size:11px; color:var(--gray); text-transform:uppercase;">% Comisión de venta (sobre ingresos)</label><br>
-    <input type="number" min="0" max="100" step="0.1" id="inputCommissionPct" value="${proj.budget.commissionPct || 0}" style="width:80px; margin-top:4px;"></div>
+  const fmt = v => v.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+  const ingresosTotales = (proj.budget.monthlyIngresos || []).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  const contractValue = parseFloat(proj.budget.contractValue) || 0;
+  const base = proj.budget.commissionBase === 'contrato' ? contractValue : ingresosTotales;
+  const commissionTotal = base * (proj.budget.commissionPct || 0) / 100;
+
+  let html = `<div style="margin-bottom:14px; display:flex; gap:20px; flex-wrap:wrap; align-items:flex-end;">
+    <div><label style="font-size:11px; color:var(--gray); text-transform:uppercase;">% Comisión de venta</label><br>
+      <input type="number" min="0" max="100" step="0.1" id="inputCommissionPct" value="${proj.budget.commissionPct || 0}" style="width:80px; margin-top:4px;"></div>
+    <div><label style="font-size:11px; color:var(--gray); text-transform:uppercase;">Se calcula sobre</label><br>
+      <select id="selCommissionBase" style="margin-top:4px;">
+        <option value="ingresos" ${proj.budget.commissionBase !== 'contrato' ? 'selected' : ''}>Ingresos configurados (${fmt(ingresosTotales)})</option>
+        <option value="contrato" ${proj.budget.commissionBase === 'contrato' ? 'selected' : ''}>Valor total del contrato (${fmt(contractValue)})</option>
+      </select>
+    </div>
+  </div>
+  <div style="font-size:12.5px; color:var(--charcoal); margin-bottom:16px; background:#fff; padding:9px 12px; border-radius:6px;">
+    Comisión total: <b>${fmt(commissionTotal)}</b> — repartida en partes iguales en los ${n} meses del presupuesto: <b>${fmt(commissionTotal / n)}</b> /mes.
+  </div>
   <div style="font-size:11px; color:var(--gray); text-transform:uppercase; margin-bottom:6px;">Costos indirectos fijos (pólizas, licencias, etc.)</div>`;
   proj.budget.indirectCosts.forEach((ic, idx) => {
     const total = ic.monthlyValues.reduce((s, v) => s + (parseFloat(v) || 0), 0);
-    html += `<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; background:#fff; padding:6px 10px; border-radius:6px;">
-      <input type="text" data-icfield="name" data-icidx="${idx}" value="${escapeHtml(ic.name || '')}" placeholder="Ej. Pólizas" style="flex:1;">
-      <span style="font-size:11.5px; color:var(--gray);">Total: ${total.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</span>
-      <button class="indent-btn" data-act="toggleIC" data-icidx="${idx}" title="Ver meses">${expandedICIds.has(idx) ? '▲' : '▶'}</button>
+    html += `<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; background:#fff; padding:8px 10px; border-radius:6px; flex-wrap:wrap;">
+      <input type="text" data-icfield="name" data-icidx="${idx}" value="${escapeHtml(ic.name || '')}" placeholder="Ej. Pólizas" style="flex:1; min-width:110px;">
+      <input type="number" min="0" data-ictotalinput="${idx}" placeholder="Valor total" style="width:120px;" title="Escribe el valor total del proyecto para este costo, y presiona 'Repartir' para dividirlo entre los meses">
+      <button class="btn btn-ghost btn-xs" data-act="distributeIC" data-icidx="${idx}">Repartir en partes iguales</button>
+      <span style="font-size:11.5px; color:${total > 0 ? 'var(--charcoal)' : 'var(--gray)'};">Total actual: ${fmt(total)}${total === 0 ? ' (sin valores aún)' : ''}</span>
+      <button class="indent-btn" data-act="toggleIC" data-icidx="${idx}" title="Ver/editar mes a mes">${expandedICIds.has(idx) ? '▲' : '▶'}</button>
       <button class="indent-btn" data-act="delIC" data-icidx="${idx}" title="Eliminar">🗑</button>
     </div>`;
     if (expandedICIds.has(idx)) {
@@ -2441,6 +2724,7 @@ function renderIndirectCostsPanel(proj, n) {
   panel.innerHTML = html;
 
   document.getElementById('inputCommissionPct').addEventListener('input', (e) => { proj.budget.commissionPct = parseFloat(e.target.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
+  document.getElementById('selCommissionBase').addEventListener('change', (e) => { proj.budget.commissionBase = e.target.value; renderBudget(); persistAll(); });
   panel.querySelectorAll('[data-icfield="name"]').forEach(inp => {
     inp.addEventListener('input', () => { proj.budget.indirectCosts[parseInt(inp.dataset.icidx)].name = inp.value; withScrollPreserved(renderBudget); persistAll(); });
   });
@@ -2452,6 +2736,17 @@ function renderIndirectCostsPanel(proj, n) {
   });
   panel.querySelectorAll('[data-act="delIC"]').forEach(btn => {
     btn.addEventListener('click', () => { proj.budget.indirectCosts.splice(parseInt(btn.dataset.icidx), 1); renderBudget(); persistAll(); });
+  });
+  panel.querySelectorAll('[data-act="distributeIC"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.icidx);
+      const totalInput = panel.querySelector(`[data-ictotalinput="${idx}"]`);
+      const totalVal = parseFloat(totalInput.value);
+      if (!totalVal || totalVal <= 0) { alert('Escribe primero el valor total a repartir.'); return; }
+      const perMonth = Math.round((totalVal / n) * 100) / 100;
+      proj.budget.indirectCosts[idx].monthlyValues = new Array(n).fill(perMonth);
+      renderBudget(); persistAll();
+    });
   });
   const addBtn = document.getElementById('btnAddIndirect');
   if (addBtn) addBtn.addEventListener('click', () => { proj.budget.indirectCosts.push({ name: '', monthlyValues: new Array(n).fill(0) }); renderBudget(); persistAll(); });
@@ -2481,19 +2776,64 @@ function exportBudgetExcel() {
   });
   rows.push([]);
   const ingresosTotales = (proj.budget.monthlyIngresos || []).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  const totalIndirectos = proj.budget.indirectCosts.reduce((s, ic) => s + ic.monthlyValues.reduce((s2, v) => s2 + (parseFloat(v) || 0), 0), 0);
+  const comisionBaseValor = proj.budget.commissionBase === 'contrato' ? (parseFloat(proj.budget.contractValue) || 0) : ingresosTotales;
+  const comisionValor = comisionBaseValor * (proj.budget.commissionPct / 100);
+  const today = new Date();
+  const startIdxE = monthKeyToIdx(proj.budget.startMonth || '');
+  const todayIdxE = today.getFullYear() * 12 + today.getMonth();
+  const mesesEjecutadosE = Math.max(0, Math.min(n, todayIdxE - startIdxE + 1));
+  const ingresoEjecutado = proj.budget.monthlyIngresos.slice(0, mesesEjecutadosE).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+
   rows.push(['Ingresos totales', ingresosTotales]);
+  rows.push(['Ingreso ejecutado a hoy', ingresoEjecutado]);
   rows.push(['Costo total planeado', grandPlanCost]);
   rows.push(['Costo total real', grandRealCost]);
-  rows.push(['Utilidad (real)', ingresosTotales - grandRealCost]);
-  rows.push(['Rentabilidad (real) %', ingresosTotales > 0 ? Math.round(((ingresosTotales - grandRealCost) / ingresosTotales) * 1000) / 10 : 0]);
+  rows.push([`Comisión de venta (${proj.budget.commissionPct || 0}% sobre ${proj.budget.commissionBase === 'contrato' ? 'contrato' : 'ingresos'})`, comisionValor]);
+  rows.push(['Costos indirectos (pólizas, licencias, etc.)', totalIndirectos]);
+  rows.push(['Utilidad (real)', ingresosTotales - grandRealCost - comisionValor - totalIndirectos]);
+  rows.push(['Rentabilidad (real) %', ingresosTotales > 0 ? Math.round(((ingresosTotales - grandRealCost - comisionValor - totalIndirectos) / ingresosTotales) * 1000) / 10 : 0]);
 
   const ingresosRows = [['Mes', 'Ingreso']];
   for (let i = 0; i < n; i++) ingresosRows.push([monthLabel(proj.budget.startMonth, i), proj.budget.monthlyIngresos[i] || 0]);
 
+  const indirectRows = [['Costo indirecto', ...Array.from({length:n}, (_,i) => monthLabel(proj.budget.startMonth, i)), 'Total']];
+  proj.budget.indirectCosts.forEach(ic => {
+    const total = ic.monthlyValues.reduce((s,v)=>s+(parseFloat(v)||0),0);
+    indirectRows.push([ic.name || '(sin nombre)', ...ic.monthlyValues, total]);
+  });
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Presupuesto');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ingresosRows), 'Ingresos por mes');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(indirectRows), 'Comisión e indirectos');
   XLSX.writeFile(wb, `Presupuesto_${(proj.name || 'proyecto').replace(/[^a-zA-Z0-9]+/g, '_')}.xlsx`);
+}
+function exportComercialExcel() {
+  const proj = currentProject(); if (!proj) return;
+  if (!proj.commercialBudget || !proj.commercialBudget.roles || !proj.commercialBudget.roles.length) { alert('No hay presupuesto comercial importado todavía.'); return; }
+  const cb = proj.commercialBudget;
+  const n = cb.duracionMeses;
+  const header = ['Recurso', '% Ocupación', 'Valor/hora', 'Horas totales', 'Costo total'];
+  for (let i = 0; i < n; i++) header.push(`${monthLabel(cb.startMonth, i)} - Horas`);
+  const rows = [header];
+  let totalCosto = 0, totalHoras = 0;
+  cb.roles.forEach(r => {
+    const rate = parseFloat(r.rate) || 0;
+    const th = r.monthlyHours.reduce((s,h)=>s+(parseFloat(h)||0),0);
+    const tc = th * rate;
+    totalCosto += tc; totalHoras += th;
+    rows.push([r.name || '', r.occupancyPct || '', rate, th, tc, ...r.monthlyHours]);
+  });
+  rows.push([]);
+  const ingresosTotales = cb.monthlyIngresos.reduce((s,v)=>s+(parseFloat(v)||0),0);
+  rows.push(['Ingresos totales (comercial)', ingresosTotales]);
+  rows.push(['Costo total (comercial)', totalCosto]);
+  rows.push(['Horas totales (comercial)', totalHoras]);
+  rows.push(['Comisión de venta (comercial) %', cb.commissionPct || 0]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Presupuesto Comercial');
+  XLSX.writeFile(wb, `Presupuesto_Comercial_${(proj.name || 'proyecto').replace(/[^a-zA-Z0-9]+/g, '_')}.xlsx`);
 }
 function exportTasksExcel() {
   const proj = currentProject(); if (!proj) return;
@@ -2553,50 +2893,53 @@ function importExcelScheduleFile(file) {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
 
+      const isNameHeader = h => /nombre\s*de\s*tarea/i.test(h) || /^tarea$/i.test(h.trim());
       let headerRowIdx = -1;
       for (let i = 0; i < rows.length; i++) {
-        if (rows[i].some(c => String(c).trim() === 'Nombre de tarea')) { headerRowIdx = i; break; }
+        if (rows[i].some(c => isNameHeader(String(c)))) { headerRowIdx = i; break; }
       }
-      if (headerRowIdx === -1) { alert('No se reconoció el formato. Este importador espera un Excel exportado de MS Project con una columna llamada "Nombre de tarea".'); return; }
+      if (headerRowIdx === -1) { alert('No se reconoció el formato. Se espera una columna de nombre de tarea (ej. "Nombre de tarea" al exportar de MS Project, o "Tarea" al exportar desde esta misma herramienta).'); return; }
 
       const header = rows[headerRowIdx].map(h => String(h).trim());
-      const colPct = header.findIndex(h => h.toLowerCase().includes('completado'));
-      const colName = header.findIndex(h => h === 'Nombre de tarea');
-      const colStart = header.findIndex(h => h.toLowerCase().includes('comienzo'));
-      const colEnd = header.findIndex(h => h.toLowerCase() === 'fin');
-      const colRes = header.findIndex(h => h.toLowerCase().includes('recursos'));
-      const colNotes = header.findIndex(h => h.toLowerCase().includes('nota'));
+      const colPct = header.findIndex(h => /completado|avance\s*real/i.test(h));
+      const colName = header.findIndex(h => isNameHeader(h));
+      const colStart = header.findIndex(h => /comienzo|^inicio$/i.test(h));
+      const colEnd = header.findIndex(h => /^fin$/i.test(h));
+      const colRes = header.findIndex(h => /recursos|responsable/i.test(h));
+      const colNotes = header.findIndex(h => /nota/i.test(h));
+      const colPred = header.findIndex(h => /predecesor/i.test(h));
 
       const dataRows = rows.slice(headerRowIdx + 1).filter(r => r[colName] && String(r[colName]).trim());
       if (dataRows.length === 0) { alert('No se encontraron filas de tareas debajo del encabezado.'); return; }
 
       const tasks = [];
-      const stack = [];
+      const stack = []; // { indent, id } — sirve para cualquier ancho de sangría, no solo múltiplos de 3
       let projectStart = null;
       let multiResourceCount = 0;
 
       dataRows.forEach(r => {
         const rawName = String(r[colName] || '');
         const indent = rawName.length - rawName.replace(/^ +/, '').length;
-        const depth = Math.round(indent / 3);
         const name = rawName.trim();
-        while (stack.length && stack[stack.length - 1].depth >= depth) stack.pop();
+        while (stack.length && stack[stack.length - 1].indent >= indent) stack.pop();
         const parentId = stack.length ? stack[stack.length - 1].id : null;
         const id = taskUid();
 
         const pctRaw = parseFloat(r[colPct]);
         const completado = isNaN(pctRaw) ? 0 : Math.round(pctRaw <= 1 ? pctRaw * 100 : pctRaw);
 
-        const startDate = parseSpanishScheduleDate(r[colStart]);
-        const endDate = parseSpanishScheduleDate(r[colEnd]);
+        const startDate = colStart >= 0 ? parseSpanishScheduleDate(r[colStart]) : null;
+        const endDate = colEnd >= 0 ? parseSpanishScheduleDate(r[colEnd]) : null;
         if (startDate && (!projectStart || startDate < projectStart)) projectStart = startDate;
 
-        const resourcesRaw = String(r[colRes] || '').trim();
+        const resourcesRaw = colRes >= 0 ? String(r[colRes] || '').trim() : '';
         const resourceList = resourcesRaw ? resourcesRaw.split(',').map(x => x.trim()).filter(Boolean) : [];
         if (resourceList.length > 1) multiResourceCount++;
         const notesRaw = colNotes >= 0 ? String(r[colNotes] || '').trim() : '';
         let notas = notesRaw;
         if (resourceList.length > 1) notas = (notas ? notas + ' | ' : '') + 'Recursos: ' + resourceList.join(', ');
+
+        const predText = colPred >= 0 ? String(r[colPred] || '').trim() : '';
 
         const toDateStr = d => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
         const durationDays = (startDate && endDate) ? Math.max(1, Math.round((endDate - startDate) / 86400000) + 1) : '';
@@ -2604,12 +2947,16 @@ function importExcelScheduleFile(file) {
         tasks.push(normalizeTask({
           id, name, parentId, completado, duration: durationDays,
           resource: resourceList[0] || '',
+          predText,
+          // Al IMPORTAR, la fecha del archivo manda siempre — sin importar si la tarea
+          // trae predecesora. La predecesora queda guardada para que puedas usarla
+          // más adelante si tú decides editarla a mano (ahí sí se recalcula).
           manualStart: toDateStr(startDate),
           manualStartDateTime: startDate ? toDateStr(startDate) + 'T08:00:00' : '',
           manualEndDateTime: endDate ? toDateStr(endDate) + 'T16:59:59' : '',
           notas
         }));
-        stack.push({ depth, id });
+        stack.push({ indent, id });
       });
 
       const resourceNames = new Set();
@@ -2642,7 +2989,7 @@ function importExcelScheduleFile(file) {
    Tiempo, Proyecto, Usuario, Correo, Empresa, Minutos, Squad, Fecha,
    Creación, Horas, Categoría — una fila por registro de tiempo.
    ============================================================ */
-function parsePolarisDate(str) {
+function parseFollowUpDate(str) {
   if (!str) return null;
   const s = String(str).trim();
   const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
@@ -2651,8 +2998,8 @@ function parsePolarisDate(str) {
   if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
   return new Date(y, mo - 1, d);
 }
-let _polarisPendingRows = null;
-function importPolarisHoursFile(file) {
+let _followupPendingRows = null;
+function importFollowUpHoursFile(file) {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
@@ -2672,15 +3019,15 @@ function importPolarisHoursFile(file) {
             const r = rows[i]; if (!r || !r[colProyecto]) continue;
             const horas = parseFloat(r[colHoras]);
             if (!horas) continue;
-            parsed.push({ proyecto: String(r[colProyecto]).trim(), usuario: String(r[colUsuario] || '').trim(), fecha: parsePolarisDate(r[colFecha]), horas });
+            parsed.push({ proyecto: String(r[colProyecto]).trim(), usuario: String(r[colUsuario] || '').trim(), fecha: parseFollowUpDate(r[colFecha]), horas });
           }
           sheetRows = parsed;
           break;
         }
       }
-      if (!sheetRows || sheetRows.length === 0) { alert('No se reconoció el formato. Se espera una hoja con columnas idTarea, Proyecto, Usuario, Fecha y Horas (reporte de Polaris/FollowUp).'); return; }
-      _polarisPendingRows = sheetRows;
-      openPolarisProjectModal(sheetRows);
+      if (!sheetRows || sheetRows.length === 0) { alert('No se reconoció el formato. Se espera una hoja con columnas idTarea, Proyecto, Usuario, Fecha y Horas (reporte de FollowUp/FollowUp).'); return; }
+      _followupPendingRows = sheetRows;
+      openFollowUpProjectModal(sheetRows);
     } catch (err) {
       console.error(err);
       alert('No se pudo leer el archivo: ' + err.message);
@@ -2688,12 +3035,12 @@ function importPolarisHoursFile(file) {
   };
   reader.readAsArrayBuffer(file);
 }
-function openPolarisProjectModal(rows) {
+function openFollowUpProjectModal(rows) {
   const proj = currentProject();
   const distinctProjects = Array.from(new Set(rows.map(r => r.proyecto))).sort();
   const nameLower = (proj.name || '').toLowerCase();
-  const modal = document.getElementById('polarisProjectModal');
-  const list = document.getElementById('polarisProjectList');
+  const modal = document.getElementById('followupProjectModal');
+  const list = document.getElementById('followupProjectList');
   list.innerHTML = distinctProjects.map(p => {
     const guess = distinctProjects.length === 1 || (nameLower && p.toLowerCase().split(/\s+/).some(w => w.length > 3 && nameLower.includes(w)));
     return `<label style="display:flex; align-items:center; gap:8px; padding:8px 4px; border-bottom:1px solid var(--border); cursor:pointer;">
@@ -2702,18 +3049,17 @@ function openPolarisProjectModal(rows) {
   }).join('');
   modal.classList.add('open');
 }
-function closePolarisProjectModal() { document.getElementById('polarisProjectModal').classList.remove('open'); }
-function confirmPolarisImport() {
+function closeFollowUpProjectModal() { document.getElementById('followupProjectModal').classList.remove('open'); }
+function monthKeyToIdx(mk) { const [y, m] = mk.split('-').map(Number); return y * 12 + (m - 1); }
+function idxToMonthKey(idx) { const y = Math.floor(idx / 12); const m = (idx % 12) + 1; return y + '-' + String(m).padStart(2, '0'); }
+function confirmFollowUpImport() {
   const proj = currentProject(); if (!proj) return;
-  const checked = Array.from(document.querySelectorAll('#polarisProjectList input:checked')).map(i => i.value);
-  if (checked.length === 0) { alert('Selecciona al menos un proyecto de Polaris.'); return; }
-  const rows = _polarisPendingRows.filter(r => checked.includes(r.proyecto) && r.fecha);
-  if (rows.length === 0) { alert('No se encontraron registros de horas para lo seleccionado.'); closePolarisProjectModal(); return; }
+  const checked = Array.from(document.querySelectorAll('#followupProjectList input:checked')).map(i => i.value);
+  if (checked.length === 0) { alert('Selecciona al menos un proyecto de FollowUp.'); return; }
+  const rows = _followupPendingRows.filter(r => checked.includes(r.proyecto) && r.fecha);
+  if (rows.length === 0) { alert('No se encontraron registros de horas para lo seleccionado.'); closeFollowUpProjectModal(); return; }
 
-  const n = proj.budget.duracionMeses;
-  const [fy, fm] = (proj.budget.startMonth || '').split('-').map(Number);
   const byUserMonth = {};
-  const unmatchedNames = new Set();
   rows.forEach(r => {
     const mk = r.fecha.getFullYear() + '-' + String(r.fecha.getMonth() + 1).padStart(2, '0');
     const key = r.usuario.trim().toLowerCase();
@@ -2721,24 +3067,201 @@ function confirmPolarisImport() {
     byUserMonth[key].months[mk] = (byUserMonth[key].months[mk] || 0) + r.horas;
   });
 
+  const allUsers = Object.values(byUserMonth);
+  const matchedEntries = allUsers.filter(u => proj.budget.roles.some(rr => rr.name.trim().toLowerCase() === u.display.toLowerCase()));
+  const unmatchedNames = allUsers.filter(u => !matchedEntries.includes(u)).map(u => u.display);
+
+  if (matchedEntries.length === 0) {
+    alert('Ninguno de estos nombres de "Usuario" coincide con un recurso registrado en "Recursos y costos": ' + unmatchedNames.join(', ') + '.\n\nEl nombre debe ser exactamente igual (mayúsculas, espacios, etc.) al que aparece en el reporte. Agrega o corrige el recurso y vuelve a intentar.');
+    closeFollowUpProjectModal();
+    return;
+  }
+
+  // Detectar el rango completo de meses con horas reales (incluidos los que caen
+  // fuera de lo que ya tenías planeado), y extender el presupuesto para cubrirlos.
+  const allMonthKeys = new Set();
+  matchedEntries.forEach(u => Object.keys(u.months).forEach(mk => allMonthKeys.add(mk)));
+  const dataIdxs = Array.from(allMonthKeys).map(monthKeyToIdx);
+  const dataMinIdx = Math.min(...dataIdxs), dataMaxIdx = Math.max(...dataIdxs);
+
+  let curStartIdx = proj.budget.startMonth ? monthKeyToIdx(proj.budget.startMonth) : dataMinIdx;
+  let curN = proj.budget.duracionMeses || 1;
+  let curEndIdx = curStartIdx + curN - 1;
+
+  const newStartIdx = Math.min(curStartIdx, dataMinIdx);
+  const newEndIdx = Math.max(curEndIdx, dataMaxIdx);
+  const newN = newEndIdx - newStartIdx + 1;
+  const prependCount = curStartIdx - newStartIdx;
+  const rangeExtended = prependCount > 0 || newN > curN;
+
+  if (rangeExtended) {
+    const padStart = (arr) => new Array(prependCount).fill(0).concat(arr || []);
+    proj.budget.roles.forEach(r => {
+      r.monthlyHours = padStart(r.monthlyHours); while (r.monthlyHours.length < newN) r.monthlyHours.push(0);
+      r.monthlyHoursReal = padStart(r.monthlyHoursReal); while (r.monthlyHoursReal.length < newN) r.monthlyHoursReal.push(0);
+    });
+    proj.budget.indirectCosts.forEach(ic => { ic.monthlyValues = padStart(ic.monthlyValues); while (ic.monthlyValues.length < newN) ic.monthlyValues.push(0); });
+    proj.budget.monthlyIngresos = padStart(proj.budget.monthlyIngresos); while (proj.budget.monthlyIngresos.length < newN) proj.budget.monthlyIngresos.push(0);
+    proj.budget.startMonth = idxToMonthKey(newStartIdx);
+    proj.budget.duracionMeses = newN;
+  }
+
+  const n = proj.budget.duracionMeses;
+  const finalStartIdx = monthKeyToIdx(proj.budget.startMonth);
   let matchedCount = 0;
-  Object.values(byUserMonth).forEach(u => {
+  matchedEntries.forEach(u => {
     const role = proj.budget.roles.find(rr => rr.name.trim().toLowerCase() === u.display.toLowerCase());
-    if (!role) { unmatchedNames.add(u.display); return; }
     matchedCount++;
     role.monthlyHoursReal = new Array(n).fill(0);
     for (let m = 0; m < n; m++) {
-      const d = new Date(fy, (fm - 1) + m, 1);
-      const mk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      const mk = idxToMonthKey(finalStartIdx + m);
       role.monthlyHoursReal[m] = Math.round((u.months[mk] || 0) * 100) / 100;
     }
   });
 
-  renderBudget(); persistAll(); closePolarisProjectModal();
-  saveIndicator('Horas reales importadas desde Polaris');
-  let msg = `Horas reales actualizadas para ${matchedCount} recurso(s), desde ${rows.length} registros de Polaris.`;
-  if (unmatchedNames.size) msg += `\n\nNo se encontraron en "Recursos y costos" (no se importaron sus horas): ${Array.from(unmatchedNames).join(', ')}.\nAgrégalos primero como recurso si quieres traer sus horas.`;
-  alert(msg);
+  renderBudget(); persistAll(); closeFollowUpProjectModal();
+  saveIndicator('Horas reales importadas desde FollowUp');
+  let msg = `Horas reales actualizadas para ${matchedCount} recurso(s), desde ${rows.length} registros.`;
+  if (rangeExtended) msg += `\n\nAlgunas horas caían en meses que no tenías planeados — extendí el presupuesto a ${n} meses (desde ${proj.budget.startMonth}) para no perder esa información.`;
+  if (unmatchedNames.length) msg += `\n\nNo se encontraron en "Recursos y costos" (no se importaron sus horas): ${unmatchedNames.join(', ')}.`;
+  setTimeout(() => alert(msg), 150);
+}
+
+function parseBudgetWorkbook(wb, existingDuracionMeses) {
+  const findCol = (arr, regex) => { for (let c = 0; c < arr.length; c++) { if (arr[c] && regex.test(String(arr[c]))) return c; } return -1; };
+  let bestCandidate = null;
+  let found = false;
+  let monthlyIngresosFromHitos = null;
+
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+    for (const row of rows) {
+      if (!row) continue;
+      const vals = [];
+      let hits = 0;
+      for (let c = 0; c < row.length; c++) {
+        if (row[c] && /total\s*ingreso/i.test(String(row[c]))) {
+          hits++;
+          for (let cc = c + 1; cc < row.length; cc++) {
+            if (typeof row[cc] === 'number') { vals.push(row[cc]); break; }
+            if (row[cc] !== null && row[cc] !== undefined && row[cc] !== '' && !isNaN(parseFloat(row[cc]))) { vals.push(parseFloat(row[cc])); break; }
+            if (row[cc] && /total\s*ingreso/i.test(String(row[cc]))) { vals.push(0); break; }
+          }
+        }
+      }
+      if (hits >= 2 && vals.length) { monthlyIngresosFromHitos = vals; break; }
+    }
+    if (monthlyIngresosFromHitos) break;
+  }
+
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+    let anchorRow = -1;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i] && rows[i][0] && String(rows[i][0]).toLowerCase().includes('costo proyectado por persona')) { anchorRow = i; break; }
+    }
+    if (anchorRow < 0) continue;
+    const headerArr = rows[anchorRow];
+    const occCol = findCol(headerArr, /ocupaci/i);
+    const rateCol = findCol(headerArr, /valor\s*por\s*hora|valor\s*hora/i);
+    const startCol = findCol(headerArr, /horas\s*planeadas/i);
+    if (startCol < 0) continue;
+    let patternWidth = 2;
+    for (let c = startCol + 1; c < headerArr.length; c++) { if (headerArr[c] && /horas\s*planeadas/i.test(String(headerArr[c]))) { patternWidth = c - startCol; break; } }
+    const hasReal = headerArr.slice(startCol, startCol + Math.max(patternWidth, 4)).some(c => c && /ejecutad/i.test(String(c)));
+
+    let ingresosVal = null;
+    for (let i = 0; i < Math.min(rows.length, 20); i++) {
+      if (rows[i] && rows[i][0] && String(rows[i][0]).toLowerCase().includes('ingresos')) {
+        const rowVals = rows[i].filter(v => typeof v === 'number');
+        if (rowVals.length) { ingresosVal = Math.max(...rowVals); break; }
+      }
+    }
+
+    const rawRoleRows = [];
+    for (let i = anchorRow + 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || !r[0]) break;
+      const name = String(r[0]).trim();
+      if (/comisi[oó]n|total|utilidad|rentabilidad/i.test(name)) break;
+      rawRoleRows.push(r);
+    }
+    if (rawRoleRows.length === 0) continue;
+    let maxMonths = 0;
+    rawRoleRows.forEach(r => { const m = Math.floor(Math.max(0, r.length - startCol) / patternWidth); if (m > maxMonths) maxMonths = m; });
+    maxMonths = Math.max(1, Math.min(maxMonths, 36));
+
+    const roles = [];
+    rawRoleRows.forEach(r => {
+      const name = String(r[0]).trim();
+      const rate = rateCol >= 0 ? (typeof r[rateCol] === 'number' ? r[rateCol] : parseFloat(r[rateCol])) : NaN;
+      const occRaw = occCol >= 0 ? (typeof r[occCol] === 'number' ? r[occCol] * 100 : parseFloat(r[occCol])) : NaN;
+      const monthlyHours = [], monthlyHoursReal = [];
+      for (let m = 0; m < maxMonths; m++) {
+        const base = startCol + m * patternWidth;
+        const planH = r[base];
+        monthlyHours.push(typeof planH === 'number' ? planH : (parseFloat(planH) || 0));
+        if (hasReal && patternWidth >= 4) {
+          const realH = r[base + 2];
+          monthlyHoursReal.push(typeof realH === 'number' ? realH : (parseFloat(realH) || 0));
+        } else monthlyHoursReal.push(0);
+      }
+      if (!isNaN(rate) || monthlyHours.some(h => h > 0)) {
+        roles.push({ name, occupancyPct: isNaN(occRaw) ? '' : Math.round(occRaw), rate: isNaN(rate) ? '' : rate, monthlyHours, monthlyHoursReal });
+      }
+    });
+    if (roles.length === 0) continue;
+
+    const candidate = { roles, duracionMeses: maxMonths, ingresosVal, hasReal, sheetName };
+    if (!bestCandidate || (candidate.hasReal && !bestCandidate.hasReal)) bestCandidate = candidate;
+    found = true;
+  }
+
+  if (!found) {
+    for (const sheetName of wb.SheetNames) {
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+      const headerRowIdx = rows.findIndex(r => r && r.some(c => typeof c === 'string' && /^rol|recurso/i.test(c.trim())));
+      if (headerRowIdx >= 0) {
+        const header = rows[headerRowIdx].map(c => (c || '').toString().toLowerCase());
+        const nameIdx = header.findIndex(h => /rol|recurso/.test(h));
+        const hoursIdx = header.findIndex(h => /hora/.test(h));
+        const rateIdx = header.findIndex(h => /valor|tarifa|rate/.test(h));
+        const roles = [];
+        const dur = existingDuracionMeses || 6;
+        for (let i = headerRowIdx + 1; i < rows.length; i++) {
+          const r = rows[i]; if (!r || !r[nameIdx]) break;
+          const totalH = parseFloat(r[hoursIdx]) || 0;
+          const even = Math.round((totalH / dur) * 100) / 100;
+          roles.push({ name: String(r[nameIdx]), rate: r[rateIdx] || '', occupancyPct: '', monthlyHours: new Array(dur).fill(even), monthlyHoursReal: new Array(dur).fill(0) });
+        }
+        if (roles.length) { bestCandidate = { roles, duracionMeses: dur, ingresosVal: null, hasReal: false, sheetName }; found = true; break; }
+      }
+    }
+  }
+
+  let commissionFound = null;
+  const indirectNamesFound = new Set();
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]; if (!row) continue;
+      if (row[0] && /comisi[oó]n\s*de\s*venta/i.test(String(row[0]))) {
+        const nextRow = rows[i + 1];
+        if (nextRow) {
+          const frac = nextRow.find(v => typeof v === 'number' && v > 0 && v < 1);
+          if (frac) commissionFound = Math.round(frac * 1000) / 10;
+        }
+      }
+      if (row[0] && /p[oó]lizas|seguridad\s*social|licencias\s*software/i.test(String(row[0]))) {
+        indirectNamesFound.add(String(row[0]).trim());
+      }
+    }
+  }
+  return { found, bestCandidate, monthlyIngresosFromHitos, commissionFound, indirectNamesFound };
 }
 
 function importBudgetExcelFile(file) {
@@ -2748,100 +3271,7 @@ function importBudgetExcelFile(file) {
       const data = new Uint8Array(e.target.result);
       const wb = XLSX.read(data, { type: 'array' });
       const proj = currentProject(); if (!proj) return;
-      const findCol = (arr, regex) => { for (let c = 0; c < arr.length; c++) { if (arr[c] && regex.test(String(arr[c]))) return c; } return -1; };
-      let bestCandidate = null; // { roles, duracionMeses, ingresosVal, hasReal }
-      let found = false;
-      let monthlyIngresosFromHitos = null;
-
-      // Buscar una fila con celdas "Total Ingreso" repetidas (una por hito/mes) — esta es la
-      // fuente confiable del ingreso real por periodo, a diferencia de una fila genérica que
-      // diga "Ingresos" (que suele traer un valor de referencia como el TRM, no el ingreso).
-      for (const sheetName of wb.SheetNames) {
-        const ws = wb.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-        for (const row of rows) {
-          if (!row) continue;
-          const vals = [];
-          let hits = 0;
-          for (let c = 0; c < row.length; c++) {
-            if (row[c] && /total\s*ingreso/i.test(String(row[c]))) {
-              hits++;
-              for (let cc = c + 1; cc < row.length; cc++) {
-                if (typeof row[cc] === 'number') { vals.push(row[cc]); break; }
-                if (row[cc] !== null && row[cc] !== undefined && row[cc] !== '' && !isNaN(parseFloat(row[cc]))) { vals.push(parseFloat(row[cc])); break; }
-                if (row[cc] && /total\s*ingreso/i.test(String(row[cc]))) { vals.push(0); break; }
-              }
-            }
-          }
-          if (hits >= 2 && vals.length) { monthlyIngresosFromHitos = vals; break; }
-        }
-        if (monthlyIngresosFromHitos) break;
-      }
-
-      for (const sheetName of wb.SheetNames) {
-        const ws = wb.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-        let anchorRow = -1;
-        for (let i = 0; i < rows.length; i++) {
-          if (rows[i] && rows[i][0] && String(rows[i][0]).toLowerCase().includes('costo proyectado por persona')) { anchorRow = i; break; }
-        }
-        if (anchorRow < 0) continue;
-        const headerArr = rows[anchorRow];
-        const occCol = findCol(headerArr, /ocupaci/i);
-        const rateCol = findCol(headerArr, /valor\s*por\s*hora|valor\s*hora/i);
-        const startCol = findCol(headerArr, /horas\s*planeadas/i);
-        if (startCol < 0) continue;
-        let patternWidth = 2;
-        for (let c = startCol + 1; c < headerArr.length; c++) { if (headerArr[c] && /horas\s*planeadas/i.test(String(headerArr[c]))) { patternWidth = c - startCol; break; } }
-        const hasReal = headerArr.slice(startCol, startCol + Math.max(patternWidth, 4)).some(c => c && /ejecutad/i.test(String(c)));
-
-        let ingresosVal = null;
-        for (let i = 0; i < Math.min(rows.length, 20); i++) {
-          if (rows[i] && rows[i][0] && String(rows[i][0]).toLowerCase().includes('ingresos')) {
-            const rowVals = rows[i].filter(v => typeof v === 'number');
-            if (rowVals.length) { ingresosVal = Math.max(...rowVals); break; }
-          }
-        }
-
-        const rawRoleRows = [];
-        for (let i = anchorRow + 1; i < rows.length; i++) {
-          const r = rows[i];
-          if (!r || !r[0]) break;
-          const name = String(r[0]).trim();
-          if (/comisi[oó]n|total|utilidad|rentabilidad/i.test(name)) break;
-          rawRoleRows.push(r);
-        }
-        if (rawRoleRows.length === 0) continue;
-        let maxMonths = 0;
-        rawRoleRows.forEach(r => { const m = Math.floor(Math.max(0, r.length - startCol) / patternWidth); if (m > maxMonths) maxMonths = m; });
-        maxMonths = Math.max(1, Math.min(maxMonths, 36));
-
-        const roles = [];
-        rawRoleRows.forEach(r => {
-          const name = String(r[0]).trim();
-          const rate = rateCol >= 0 ? (typeof r[rateCol] === 'number' ? r[rateCol] : parseFloat(r[rateCol])) : NaN;
-          const occRaw = occCol >= 0 ? (typeof r[occCol] === 'number' ? r[occCol] * 100 : parseFloat(r[occCol])) : NaN;
-          const monthlyHours = [], monthlyHoursReal = [];
-          for (let m = 0; m < maxMonths; m++) {
-            const base = startCol + m * patternWidth;
-            const planH = r[base];
-            monthlyHours.push(typeof planH === 'number' ? planH : (parseFloat(planH) || 0));
-            if (hasReal && patternWidth >= 4) {
-              const realH = r[base + 2];
-              monthlyHoursReal.push(typeof realH === 'number' ? realH : (parseFloat(realH) || 0));
-            } else monthlyHoursReal.push(0);
-          }
-          if (!isNaN(rate) || monthlyHours.some(h => h > 0)) {
-            roles.push({ name, occupancyPct: isNaN(occRaw) ? '' : Math.round(occRaw), rate: isNaN(rate) ? '' : rate, monthlyHours, monthlyHoursReal });
-          }
-        });
-        if (roles.length === 0) continue;
-
-        const candidate = { roles, duracionMeses: maxMonths, ingresosVal, hasReal, sheetName };
-        // Preferir el candidato que sí traiga horas reales/ejecutadas
-        if (!bestCandidate || (candidate.hasReal && !bestCandidate.hasReal)) bestCandidate = candidate;
-        found = true;
-      }
+      const { found, bestCandidate, monthlyIngresosFromHitos, commissionFound, indirectNamesFound } = parseBudgetWorkbook(wb, proj.budget.duracionMeses);
 
       if (bestCandidate) {
         proj.budget.roles = bestCandidate.roles;
@@ -2855,54 +3285,8 @@ function importBudgetExcelFile(file) {
           proj.budget.monthlyIngresos = new Array(bestCandidate.duracionMeses).fill(bestCandidate.ingresosVal);
         }
       }
-      if (!found) {
-        // Formato simple de respaldo: buscar encabezados "Rol"/"Horas"/"Valor" en cualquier hoja
-        for (const sheetName of wb.SheetNames) {
-          const ws = wb.Sheets[sheetName];
-          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-          const headerRowIdx = rows.findIndex(r => r && r.some(c => typeof c === 'string' && /^rol|recurso/i.test(c.trim())));
-          if (headerRowIdx >= 0) {
-            const header = rows[headerRowIdx].map(c => (c || '').toString().toLowerCase());
-            const nameIdx = header.findIndex(h => /rol|recurso/.test(h));
-            const hoursIdx = header.findIndex(h => /hora/.test(h));
-            const rateIdx = header.findIndex(h => /valor|tarifa|rate/.test(h));
-            const roles = [];
-            const dur = proj.budget.duracionMeses || 6;
-            for (let i = headerRowIdx + 1; i < rows.length; i++) {
-              const r = rows[i]; if (!r || !r[nameIdx]) break;
-              const totalH = parseFloat(r[hoursIdx]) || 0;
-              const even = Math.round((totalH / dur) * 100) / 100;
-              roles.push({ name: String(r[nameIdx]), rate: r[rateIdx] || '', occupancyPct: '', monthlyHours: new Array(dur).fill(even), monthlyHoursReal: new Array(dur).fill(0) });
-            }
-            if (roles.length) { proj.budget.roles = roles; found = true; break; }
-          }
-        }
-      }
       if (!found) { alert('No se reconoció el formato del Excel. Puedes llenar la tabla de roles manualmente, o revisar que tenga la fila "Costo Proyectado por persona x mes" o encabezados Rol/Horas/Valor.'); return; }
 
-      // Detectar % de comisión de venta (fila "Comisión de venta", el % suele ir en la fila
-      // siguiente como una fracción, ej. 0.03 = 3%). Y detectar nombres de costos indirectos
-      // (ej. "Pólizas") para crear la línea lista — sin adivinar los montos por columna, ya
-      // que ese cruce es más frágil; los montos los completas tú en el panel nuevo.
-      let commissionFound = null;
-      const indirectNamesFound = new Set();
-      for (const sheetName of wb.SheetNames) {
-        const ws = wb.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i]; if (!row) continue;
-          if (row[0] && /comisi[oó]n\s*de\s*venta/i.test(String(row[0]))) {
-            const nextRow = rows[i + 1];
-            if (nextRow) {
-              const frac = nextRow.find(v => typeof v === 'number' && v > 0 && v < 1);
-              if (frac) commissionFound = Math.round(frac * 1000) / 10;
-            }
-          }
-          if (row[0] && /p[oó]lizas|seguridad\s*social|licencias\s*software/i.test(String(row[0]))) {
-            indirectNamesFound.add(String(row[0]).trim());
-          }
-        }
-      }
       if (commissionFound !== null) proj.budget.commissionPct = commissionFound;
       indirectNamesFound.forEach(name => {
         if (!proj.budget.indirectCosts.some(ic => ic.name.toLowerCase() === name.toLowerCase())) {
@@ -2910,7 +3294,7 @@ function importBudgetExcelFile(file) {
         }
       });
       if (commissionFound !== null || indirectNamesFound.size > 0) {
-        setTimeout(() => alert(`También encontré:\n${commissionFound !== null ? `• Comisión de venta: ${commissionFound}% (ya la puse)\n` : ''}${indirectNamesFound.size ? `• Costo(s) indirecto(s): ${Array.from(indirectNamesFound).join(', ')} (creé la línea, pero completa tú los montos mensuales en "Comisión de venta y costos indirectos" — no me arriesgué a leer esa columna automático porque el cruce es más frágil)` : ''}`), 300);
+        setTimeout(() => alert(`También encontré:\n${commissionFound !== null ? `• Comisión de venta: ${commissionFound}% (ya la puse)\n` : ''}${indirectNamesFound.size ? `• Costo(s) indirecto(s): ${Array.from(indirectNamesFound).join(', ')} (creé la línea — escribe el valor TOTAL del proyecto en el campo junto a "Repartir en partes iguales", dentro de "Comisión de venta y costos indirectos")` : ''}`), 300);
       }
 
       renderBudget(); persistAll(); saveIndicator('Presupuesto importado');
@@ -2923,6 +3307,189 @@ function importBudgetExcelFile(file) {
 }
 
 /* ============================================================
+   PRESUPUESTO COMERCIAL (referencia fija, no se recalcula)
+   ============================================================ */
+function importComercialBudgetFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const proj = currentProject(); if (!proj) return;
+      const { found, bestCandidate, monthlyIngresosFromHitos, commissionFound, indirectNamesFound } = parseBudgetWorkbook(wb, (proj.commercialBudget && proj.commercialBudget.duracionMeses) || 6);
+      if (!found || !bestCandidate) { alert('No se reconoció el formato del Excel comercial. Debe tener la fila "Costo Proyectado por persona x mes", igual que el de Presupuesto y costos.'); return; }
+
+      const cb = { roles: bestCandidate.roles, duracionMeses: bestCandidate.duracionMeses, startMonth: proj.start ? proj.start.slice(0, 7) : '', contractValue: '', commissionPct: commissionFound || 0, indirectCosts: Array.from(indirectNamesFound).map(name => ({ name, monthlyValues: new Array(bestCandidate.duracionMeses).fill(0) })), monthlyIngresos: new Array(bestCandidate.duracionMeses).fill(0), importedAt: new Date().toISOString() };
+      if (monthlyIngresosFromHitos && monthlyIngresosFromHitos.length) {
+        for (let i = 0; i < Math.min(cb.duracionMeses, monthlyIngresosFromHitos.length); i++) cb.monthlyIngresos[i] = monthlyIngresosFromHitos[i];
+      } else if (bestCandidate.ingresosVal) {
+        cb.monthlyIngresos = new Array(cb.duracionMeses).fill(bestCandidate.ingresosVal);
+      }
+      proj.commercialBudget = cb;
+      renderComercial(); persistAll(); saveIndicator('Presupuesto comercial importado');
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo leer el archivo Excel: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+/* ============================================================
+   ANALÍTICAS PMO — indicadores de cronograma y presupuesto
+   ============================================================ */
+function renderAnalytics() {
+  const proj = currentProject();
+  const container = document.getElementById('analyticsContent');
+  if (!proj || proj.tasks.length === 0) { container.innerHTML = `<div class="card"><div class="empty-state">Agrega tareas al cronograma para ver las analíticas.</div></div>`; return; }
+  recalc();
+  const fmt = v => v.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+
+  // --- Cronograma ---
+  const leaves = proj.tasks.filter(t => !hasChildrenGlobal[t.id]);
+  const root = proj.tasks.find(t => !t.parentId);
+  const rootProgress = root ? computePhaseProgress(proj, root.id) : null;
+  const avanceReal = rootProgress ? rootProgress.real : 0;
+  const avanceEsperado = rootProgress ? rootProgress.esperado : 0;
+  const spi = avanceEsperado > 0 ? Math.round((avanceReal / avanceEsperado) * 100) / 100 : (avanceReal > 0 ? 1 : 0);
+  const vencidas = leaves.filter(t => { const r = scheduleResults[t.id]; return r && !r.isMilestone && r.end < today && (parseFloat(t.completado) || 0) < 100; }).length;
+  const criticas = leaves.filter(t => { const r = scheduleResults[t.id]; return r && r.critical && (parseFloat(t.completado) || 0) < 100; }).length;
+  const completadas = leaves.filter(t => (parseFloat(t.completado) || 0) >= 100).length;
+  const proyectoFin = root && scheduleResults[root.id] ? scheduleResults[root.id].end : null;
+  const proximosHitos = leaves.filter(t => { const r = scheduleResults[t.id]; return r && r.isMilestone && r.end >= today && (parseFloat(t.completado) || 0) < 100; })
+    .sort((a, b) => scheduleResults[a.id].end - scheduleResults[b.id].end).slice(0, 3);
+
+  // --- Presupuesto ---
+  const n = proj.budget.duracionMeses;
+  const grandPlanCost = proj.budget.roles.reduce((s, r) => s + r.monthlyHours.reduce((s2, h) => s2 + (parseFloat(h) || 0), 0) * (parseFloat(r.rate) || 0), 0);
+  const grandRealCost = proj.budget.roles.reduce((s, r) => s + r.monthlyHoursReal.reduce((s2, h) => s2 + (parseFloat(h) || 0), 0) * (parseFloat(r.rate) || 0), 0);
+  const ingresosTotales = proj.budget.monthlyIngresos.reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  const totalIndirectos = proj.budget.indirectCosts.reduce((s, ic) => s + ic.monthlyValues.reduce((s2, v) => s2 + (parseFloat(v) || 0), 0), 0);
+  const comisionBaseValor = proj.budget.commissionBase === 'contrato' ? (parseFloat(proj.budget.contractValue) || 0) : ingresosTotales;
+  const comisionValor = comisionBaseValor * (proj.budget.commissionPct / 100);
+  const otrosCostos = totalIndirectos + comisionValor;
+  const margenPlan = ingresosTotales > 0 ? Math.round(((ingresosTotales - grandPlanCost - otrosCostos) / ingresosTotales) * 1000) / 10 : 0;
+  const margenReal = ingresosTotales > 0 ? Math.round(((ingresosTotales - grandRealCost - otrosCostos) / ingresosTotales) * 1000) / 10 : 0;
+  // Valor ganado (earned value) aproximado: % avance real del cronograma x costo total planeado
+  const valorGanado = grandPlanCost * (avanceReal / 100);
+  const cpi = grandRealCost > 0 ? Math.round((valorGanado / grandRealCost) * 100) / 100 : (grandRealCost === 0 && grandPlanCost > 0 ? null : 1);
+  const startIdx = monthKeyToIdx(proj.budget.startMonth || '');
+  const todayIdx = today.getFullYear() * 12 + today.getMonth();
+  const mesesTranscurridos = Math.max(0, Math.min(n, todayIdx - startIdx + 1));
+  const burnRate = mesesTranscurridos > 0 ? grandRealCost / mesesTranscurridos : 0;
+  const mesesRestantes = n - mesesTranscurridos;
+  const proyeccionCostoFinal = grandRealCost + burnRate * Math.max(0, mesesRestantes);
+
+  const badge = (cond, yes, no) => `<span style="color:${cond ? 'var(--green)' : 'var(--red)'}; font-weight:700;">${cond ? yes : no}</span>`;
+
+  let html = `<div class="card">
+    <p class="section-title"><span class="n">📅</span>Cronograma — indicadores clave</p>
+    <div class="cost-summary">
+      <div class="cost-box"><div class="k">Avance real vs esperado</div><div class="v">${avanceReal}% <span style="font-size:13px; color:var(--gray);">/ ${avanceEsperado}%</span></div></div>
+      <div class="cost-box" title="SPI > 1 vas adelantado, < 1 vas atrasado (como en EVM)"><div class="k">Índice de desempeño (SPI)</div><div class="v">${badge(spi >= 0.95, spi.toFixed(2), spi.toFixed(2))}</div></div>
+      <div class="cost-box"><div class="k">Fecha fin proyectada</div><div class="v" style="font-size:16px;">${proyectoFin ? proyectoFin.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'}) : '—'}</div></div>
+      <div class="cost-box"><div class="k">Tareas vencidas</div><div class="v">${badge(vencidas === 0, vencidas, vencidas)}</div></div>
+      <div class="cost-box"><div class="k">Tareas en ruta crítica</div><div class="v">${badge(criticas === 0, criticas, criticas)}</div></div>
+      <div class="cost-box"><div class="k">Tareas completadas</div><div class="v">${completadas} <span style="font-size:13px; color:var(--gray);">/ ${leaves.length}</span></div></div>
+    </div>
+    ${proximosHitos.length ? `<p class="hint" style="margin-top:12px;"><b>Próximos hitos:</b> ${proximosHitos.map(t => `${escapeHtml(t.name)} (${scheduleResults[t.id].end.toLocaleDateString('es-CO',{day:'2-digit',month:'short'})})`).join(' · ')}</p>` : ''}
+  </div>
+
+  <div class="card">
+    <p class="section-title"><span class="n">💰</span>Presupuesto — indicadores clave</p>
+    <div class="cost-summary">
+      <div class="cost-box" title="CPI > 1 gastas menos de lo ganado, < 1 gastas de más (como en EVM)"><div class="k">Índice de costo (CPI)</div><div class="v">${cpi === null ? '—' : badge(cpi >= 0.95, cpi.toFixed(2), cpi.toFixed(2))}</div></div>
+      <div class="cost-box"><div class="k">Margen proyectado vs real</div><div class="v">${margenPlan}% <span style="font-size:13px; color:var(--gray);">/ ${margenReal}%</span></div></div>
+      <div class="cost-box" title="Costo real promedio por mes transcurrido"><div class="k">Burn rate mensual</div><div class="v" style="font-size:15px;">${fmt(burnRate)}</div></div>
+      <div class="cost-box" title="Costo real a hoy + burn rate x meses restantes"><div class="k">Costo final proyectado</div><div class="v" style="font-size:15px; color:${proyeccionCostoFinal <= grandPlanCost ? 'var(--green)' : 'var(--red)'};">${fmt(proyeccionCostoFinal)}</div></div>
+      <div class="cost-box"><div class="k">Meses transcurridos</div><div class="v">${mesesTranscurridos} <span style="font-size:13px; color:var(--gray);">/ ${n}</span></div></div>
+    </div>
+    ${proj.commercialBudget && proj.commercialBudget.roles && proj.commercialBudget.roles.length ? (() => {
+      const comHoras = proj.commercialBudget.roles.reduce((s, r) => s + r.monthlyHours.reduce((s2, h) => s2 + (parseFloat(h) || 0), 0), 0);
+      const comCosto = proj.commercialBudget.roles.reduce((s, r) => s + r.monthlyHours.reduce((s2, h) => s2 + (parseFloat(h) || 0), 0) * (parseFloat(r.rate) || 0), 0);
+      const realHoras = proj.budget.roles.reduce((s, r) => s + r.monthlyHours.reduce((s2, h) => s2 + (parseFloat(h) || 0), 0), 0);
+      const diffPct = comCosto > 0 ? Math.round(((grandPlanCost - comCosto) / comCosto) * 1000) / 10 : 0;
+      return `<p class="hint" style="margin-top:12px;"><b>Vs. presupuesto comercial:</b> el plan de ejecución actual usa ${realHoras.toFixed(0)}h contra ${comHoras.toFixed(0)}h comerciales, y su costo es ${diffPct > 0 ? '+' : ''}${diffPct}% ${diffPct > 0 ? 'mayor' : 'menor'} que lo cotizado.</p>`;
+    })() : `<p class="hint" style="margin-top:12px;">Importa el presupuesto comercial (pestaña 💼) para comparar contra lo cotizado originalmente.</p>`}
+  </div>`;
+  container.innerHTML = html;
+}
+function renderComercial() {
+  const proj = currentProject();
+  const container = document.getElementById('comercialContent');
+  if (!proj || !proj.commercialBudget || !proj.commercialBudget.roles || proj.commercialBudget.roles.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="big">💼</div>Todavía no has importado el presupuesto comercial de este proyecto.</div>`;
+    return;
+  }
+  const cb = proj.commercialBudget;
+  const n = cb.duracionMeses;
+  const totalHoras = cb.roles.reduce((s, r) => s + r.monthlyHours.reduce((s2, h) => s2 + (parseFloat(h) || 0), 0), 0);
+  const totalCosto = cb.roles.reduce((s, r) => s + r.monthlyHours.reduce((s2, h) => s2 + (parseFloat(h) || 0), 0) * (parseFloat(r.rate) || 0), 0);
+  const totalIngresos = cb.monthlyIngresos.reduce((s, v) => s + (parseFloat(v) || 0), 0);
+
+  // Comparar contra el presupuesto real de ejecucion (misma pestaña de Presupuesto y costos)
+  const realCosto = proj.budget.roles.reduce((s, r) => s + r.monthlyHours.reduce((s2, h) => s2 + (parseFloat(h) || 0), 0) * (parseFloat(r.rate) || 0), 0);
+  const realHoras = proj.budget.roles.reduce((s, r) => s + r.monthlyHours.reduce((s2, h) => s2 + (parseFloat(h) || 0), 0), 0);
+  const diffCosto = realCosto - totalCosto;
+  const diffHoras = realHoras - totalHoras;
+
+  let html = `<div class="cost-summary" style="margin-bottom:16px;">
+    <div class="cost-box"><div class="k">Horas totales (comercial)</div><div class="v">${totalHoras.toFixed(0)}h</div></div>
+    <div class="cost-box"><div class="k">Costo total (comercial)</div><div class="v">${totalCosto.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</div></div>
+    <div class="cost-box"><div class="k">Ingresos (comercial)</div><div class="v">${totalIngresos.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</div></div>
+    <div class="cost-box"><div class="k">Duración (comercial)</div><div class="v">${n} meses</div></div>
+    <div class="cost-box" title="Horas planeadas hoy en 'Presupuesto y costos' vs. lo comercial"><div class="k">Diferencia de horas (real − comercial)</div><div class="v" style="color:${diffHoras<=0?'var(--green)':'var(--red)'};">${diffHoras>0?'+':''}${diffHoras.toFixed(0)}h</div></div>
+    <div class="cost-box" title="Costo planeado hoy en 'Presupuesto y costos' vs. lo comercial"><div class="k">Diferencia de costo (real − comercial)</div><div class="v" style="color:${diffCosto<=0?'var(--green)':'var(--red)'};">${diffCosto>0?'+':''}${diffCosto.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</div></div>
+  </div>
+  <p class="hint" style="margin-top:0;">Aquí puedes editar el <b>nombre</b> y la <b>tarifa</b> de cada recurso (por si el Excel no trajo alguna). Las horas mensuales vienen del Excel importado y no son editables aquí.</p>
+  <table><thead><tr><th>Recurso (comercial)</th><th class="col-med cost-col">Valor/hora</th><th class="col-med">Horas totales</th><th class="col-med cost-col">Costo total</th><th style="width:26px;"></th></tr></thead><tbody id="comercialRolesBody">`;
+  cb.roles.forEach((r, idx) => {
+    const th = r.monthlyHours.reduce((s, h) => s + (parseFloat(h) || 0), 0);
+    const tc = th * (parseFloat(r.rate) || 0);
+    html += `<tr>
+      <td><input type="text" data-field="name" data-cbidx="${idx}" value="${escapeHtml(r.name || '')}" placeholder="Nombre del recurso"></td>
+      <td class="cost-col"><input type="number" min="0" data-field="rate" data-cbidx="${idx}" value="${r.rate || ''}" placeholder="Ej. 40000"></td>
+      <td>${th}h</td>
+      <td class="cost-col">${tc.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
+      <td class="row-del" data-act="delCbRole" data-cbidx="${idx}" title="Eliminar">🗑</td>
+    </tr>`;
+  });
+  html += `</tbody></table>
+  <button class="btn btn-ghost btn-xs" id="btnAddComercialRole" style="margin-top:8px;">+ Agregar recurso manualmente</button>`;
+  if (cb.indirectCosts && cb.indirectCosts.length) {
+    html += `<p class="hint" style="margin-top:14px;">Costos indirectos mencionados en el Excel comercial: <b>${cb.indirectCosts.map(ic=>escapeHtml(ic.name)).join(', ')}</b>${cb.commissionPct ? ` — comisión de venta: <b>${cb.commissionPct}%</b>` : ''}</p>`;
+  }
+  container.innerHTML = html;
+
+  container.querySelectorAll('#comercialRolesBody [data-field]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const idx = parseInt(inp.dataset.cbidx);
+      cb.roles[idx][inp.dataset.field] = inp.value;
+      if (inp.dataset.field === 'name' && (!cb.roles[idx].rate || parseFloat(cb.roles[idx].rate) === 0)) {
+        const tarRate = findTarifarioRate(inp.value);
+        if (tarRate) cb.roles[idx].rate = tarRate;
+      }
+      withScrollPreserved(renderComercial); persistAll();
+    });
+  });
+  container.querySelectorAll('[data-act="delCbRole"]').forEach(td => {
+    td.addEventListener('click', () => {
+      cb.roles.splice(parseInt(td.dataset.cbidx), 1);
+      renderComercial(); persistAll();
+    });
+  });
+  const addRoleBtn = document.getElementById('btnAddComercialRole');
+  if (addRoleBtn) addRoleBtn.addEventListener('click', () => {
+    cb.roles.push({ name: '', occupancyPct: '', rate: '', monthlyHours: new Array(n).fill(0), monthlyHoursReal: new Array(n).fill(0) });
+    renderComercial(); persistAll();
+  });
+}
+function clearComercialBudget() {
+  const proj = currentProject(); if (!proj) return;
+  if (!confirm('¿Quitar el presupuesto comercial cargado para este proyecto?')) return;
+  proj.commercialBudget = null;
+  renderComercial(); persistAll();
+}
+/* ============================================================
    SWITCHER DE VISTAS (Cronograma / Presupuesto y costos)
    ============================================================ */
 let currentViewTab = 'cronograma';
@@ -2931,11 +3498,19 @@ function setViewTab(view) {
   document.getElementById('viewCronograma').style.display = view === 'cronograma' ? '' : 'none';
   document.getElementById('viewCronograma2').style.display = view === 'cronograma' ? '' : 'none';
   document.getElementById('viewCostos').style.display = view === 'costos' ? '' : 'none';
+  document.getElementById('viewComercial').style.display = view === 'comercial' ? '' : 'none';
+  document.getElementById('viewAnalytics').style.display = view === 'analytics' ? '' : 'none';
   document.getElementById('viewTabCronograma').classList.toggle('active', view === 'cronograma');
   document.getElementById('viewTabCostos').classList.toggle('active', view === 'costos');
+  document.getElementById('viewTabComercial').classList.toggle('active', view === 'comercial');
+  document.getElementById('viewTabAnalytics').classList.toggle('active', view === 'analytics');
+  if (view === 'comercial') renderComercial();
+  if (view === 'analytics') renderAnalytics();
 }
 document.getElementById('viewTabCronograma').addEventListener('click', () => setViewTab('cronograma'));
 document.getElementById('viewTabCostos').addEventListener('click', () => setViewTab('costos'));
+document.getElementById('viewTabComercial').addEventListener('click', () => setViewTab('comercial'));
+document.getElementById('viewTabAnalytics').addEventListener('click', () => setViewTab('analytics'));
 
 /* ============================================================
    SINCRONIZAR INGRESOS DESDE HITOS DE PAGO DEL CRONOGRAMA
@@ -3111,12 +3686,19 @@ document.getElementById('projectName').addEventListener('input', (e) => { const 
 document.getElementById('projectStart').addEventListener('change', (e) => { const proj = currentProject(); if (!proj) return; proj.start = e.target.value; recalc(); renderAll_inner(); persistAll(); });
 document.getElementById('filterText').addEventListener('input', (e) => { taskFilters.text = e.target.value; renderTaskTable(); });
 document.getElementById('filterResource').addEventListener('change', (e) => { taskFilters.resource = e.target.value; renderTaskTable(); });
+document.getElementById('filterFase').addEventListener('change', (e) => { taskFilters.fase = e.target.value; renderTaskTable(); });
 document.getElementById('filterEstado').addEventListener('change', (e) => { taskFilters.estado = e.target.value; renderTaskTable(); });
 document.getElementById('filterAvanceMin').addEventListener('input', (e) => { taskFilters.avanceMin = e.target.value; renderTaskTable(); });
 document.getElementById('filterAvanceMax').addEventListener('input', (e) => { taskFilters.avanceMax = e.target.value; renderTaskTable(); });
 document.getElementById('filterAsignMin').addEventListener('input', (e) => { taskFilters.asignMin = e.target.value; renderTaskTable(); });
 document.getElementById('filterAsignMax').addEventListener('input', (e) => { taskFilters.asignMax = e.target.value; renderTaskTable(); });
-document.getElementById('btnClearFilters').addEventListener('click', () => { taskFilters = { text: '', resource: '', estado: '', avanceMin: '', avanceMax: '', asignMin: '', asignMax: '' }; renderTaskTable(); });
+document.getElementById('btnClearFilters').addEventListener('click', () => { taskFilters = { text: '', resource: '', estado: '', fase: '', avanceMin: '', avanceMax: '', asignMin: '', asignMax: '' }; renderTaskTable(); });
+document.getElementById('btnCollapseAllPhases').addEventListener('click', () => {
+  const proj = currentProject(); if (!proj) return;
+  collapsedPhaseIds = new Set(proj.tasks.filter(t => hasChildrenGlobal[t.id]).map(t => t.id));
+  renderTaskTable();
+});
+document.getElementById('btnExpandAllPhases').addEventListener('click', () => { collapsedPhaseIds = new Set(); renderTaskTable(); });
 document.getElementById('btnExportTasksExcel').addEventListener('click', exportTasksExcel);
 document.getElementById('btnDeleteProject').addEventListener('click', deleteCurrentProject);
 document.getElementById('btnToggleClaudeChat').addEventListener('click', () => {
@@ -3143,10 +3725,10 @@ document.getElementById('budgetStartMonth').addEventListener('input', (e) => { c
 document.getElementById('btnAddBudgetRole').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.budget.roles.push({ name: '', occupancyPct: '', rate: '', monthlyHours: new Array(proj.budget.duracionMeses).fill(0), monthlyHoursReal: new Array(proj.budget.duracionMeses).fill(0) }); renderBudget(); persistAll(); });
 document.getElementById('btnSyncFromSchedule').addEventListener('click', syncBudgetFromSchedule);
 document.getElementById('btnSyncRealFromSchedule').addEventListener('click', syncRealHoursFromSchedule);
-document.getElementById('btnImportPolaris').addEventListener('click', () => document.getElementById('filePolaris').click());
-document.getElementById('filePolaris').addEventListener('change', (e) => { if (e.target.files[0]) { importPolarisHoursFile(e.target.files[0]); e.target.value = ''; } });
-document.getElementById('btnCancelPolaris').addEventListener('click', closePolarisProjectModal);
-document.getElementById('btnConfirmPolaris').addEventListener('click', confirmPolarisImport);
+document.getElementById('btnImportFollowUp').addEventListener('click', () => document.getElementById('fileFollowUp').click());
+document.getElementById('fileFollowUp').addEventListener('change', (e) => { if (e.target.files[0]) { importFollowUpHoursFile(e.target.files[0]); e.target.value = ''; } });
+document.getElementById('btnCancelFollowUp').addEventListener('click', closeFollowUpProjectModal);
+document.getElementById('btnConfirmFollowUp').addEventListener('click', confirmFollowUpImport);
 document.getElementById('btnCancelBillingMs').addEventListener('click', closeBillingMilestonesModal);
 document.getElementById('btnConfirmBillingMs').addEventListener('click', confirmBillingMilestones);
 document.getElementById('btnToggleIngresosMes').addEventListener('click', () => {
@@ -3163,6 +3745,15 @@ document.getElementById('btnToggleIndirectos').addEventListener('click', () => {
 });
 document.getElementById('btnSyncIngresosFromMilestones').addEventListener('click', syncIngresosFromMilestones);
 document.getElementById('btnImportBudgetExcel').addEventListener('click', () => document.getElementById('fileImportBudgetExcel').click());
+document.getElementById('btnImportComercial').addEventListener('click', () => document.getElementById('fileImportComercial').click());
+document.getElementById('fileImportComercial').addEventListener('change', (e) => { if (e.target.files[0]) { importComercialBudgetFile(e.target.files[0]); e.target.value = ''; } });
+document.getElementById('btnClearComercial').addEventListener('click', clearComercialBudget);
+document.getElementById('btnExportComercial').addEventListener('click', exportComercialExcel);
+document.getElementById('btnOpenTarifario').addEventListener('click', openTarifarioModal);
+document.getElementById('btnCloseTarifario').addEventListener('click', closeTarifarioModal);
+document.getElementById('btnImportTarifario').addEventListener('click', () => document.getElementById('fileImportTarifario').click());
+document.getElementById('fileImportTarifario').addEventListener('change', (e) => { if (e.target.files[0]) { importTarifarioFile(e.target.files[0]); e.target.value = ''; } });
+document.getElementById('btnAddTarifaRow').addEventListener('click', () => { state.tarifario.push({ name: '', rate: '' }); renderTarifarioModal(); persistTarifario(); });
 document.getElementById('btnExportBudgetExcel').addEventListener('click', exportBudgetExcel);
 document.getElementById('fileImportBudgetExcel').addEventListener('change', (e) => { if (e.target.files[0]) importBudgetExcelFile(e.target.files[0]); e.target.value = ''; });
 document.getElementById('btnClientMode').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.clientMode = !proj.clientMode; renderAll_inner(); persistAll(); });
@@ -3179,11 +3770,20 @@ document.getElementById('btnAddTask').addEventListener('click', () => {
 });
 document.getElementById('btnAddResource').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.resources.push({ name: '', rate: 0 }); renderAll_inner(); persistAll(); });
 document.getElementById('btnBaseline').addEventListener('click', () => {
-  const proj = currentProject(); if (!proj) return; const baseline = {};
-  Object.entries(scheduleResults).forEach(([id, r]) => { baseline[id] = { start: r.start.toISOString(), end: r.end.toISOString() }; });
-  proj.baseline = baseline; renderAll_inner(); persistAll();
+  const proj = currentProject(); if (!proj) return;
+  const label = prompt('Nombre para esta línea base (ej. "Aprobada por el cliente", "Antes del cambio de alcance"):', 'Línea base ' + new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }));
+  if (label === null) return;
+  const snapshot = {};
+  Object.entries(scheduleResults).forEach(([id, r]) => { snapshot[id] = { start: r.start.toISOString(), end: r.end.toISOString() }; });
+  proj.baselines = proj.baselines || [];
+  const entry = { id: uid(), label: label || 'Línea base', savedAt: new Date().toISOString(), snapshot };
+  proj.baselines.push(entry);
+  proj.baseline = snapshot; proj.activeBaselineId = entry.id;
+  renderAll_inner(); persistAll();
 });
-document.getElementById('btnClearBaseline').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.baseline = null; renderAll_inner(); persistAll(); });
+document.getElementById('btnClearBaseline').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.baseline = null; proj.activeBaselineId = null; renderAll_inner(); persistAll(); });
+document.getElementById('btnBaselineHistory').addEventListener('click', openBaselineHistoryModal);
+document.getElementById('btnCloseBaselineHistory').addEventListener('click', () => document.getElementById('baselineHistoryModal').classList.remove('open'));
 document.getElementById('btnCopyRecipe').addEventListener('click', copyRecipe);
 document.getElementById('btnFillExampleOutline').addEventListener('click', fillExampleOutline);
 document.getElementById('btnGenerateFromOutline').addEventListener('click', generateFromOutline);
@@ -3289,7 +3889,13 @@ function buildCoopenaeProject() {
    ============================================================ */
 (async function init() {
   document.getElementById('storageModeIndicator').textContent = hasArtifactStorage ? '· Guardando en tu cuenta de Claude' : '· Guardando en este navegador';
+  if (!hasArtifactStorage && typeof location !== 'undefined' && location.protocol === 'file:') {
+    const w = document.getElementById('fileProtocolWarning');
+    w.innerHTML = '⚠️ <b>Estás abriendo este archivo directamente desde tu computador/OneDrive</b> (no desde el link publicado). Así, algunos navegadores no guardan de forma confiable lo que hagas al cerrar o reiniciar. Para que tu cronograma no se pierda, abre siempre la herramienta desde el link publicado (ej. <code>https://geraldinesanchez.github.io/cronogramas-icx/</code>) en vez de este archivo.';
+    w.style.display = 'block';
+  }
   initClaudeChatVisibility();
+  await loadTarifario();
   const loaded = await loadAll();
   if (!loaded) {
     const coopenae = normalizeProject(buildCoopenaeProject());
