@@ -299,6 +299,7 @@ Fase 2: Migración
       <div class="field"><label>Valor total del contrato (para hitos de pago)</label><input type="text" id="budgetContractValue" placeholder="Ej. 400000000" style="width:180px;"></div>
       <button class="btn btn-accent" id="btnSyncIngresosFromMilestones">🔗 Sincronizar ingresos desde hitos del cronograma</button>
       <button class="btn btn-accent" id="btnSyncFromSchedule">🔗 Sincronizar horas planeadas desde el cronograma</button>
+      <button class="btn btn-primary" id="btnSaveBudgetExplicit">💾 Guardar presupuesto</button>
       <button class="btn btn-ghost" id="btnSyncRealFromSchedule">🔗 Sincronizar horas reales desde el avance</button>
       <button class="btn btn-accent" id="btnImportFollowUp">⏱️ Importar horas reales desde reporte</button>
       <input type="file" id="fileFollowUp" accept=".xlsx,.xls" style="display:none;">
@@ -333,7 +334,9 @@ Fase 2: Migración
       <tbody id="resourceBody"></tbody>
     </table>
     </div>
-    <div class="add-row"><button class="btn btn-ghost" id="btnAddResource">+ Agregar recurso</button></div>
+    <div class="add-row"><button class="btn btn-ghost" id="btnAddResource">+ Agregar recurso</button>
+      <button class="btn btn-ghost" id="btnRefreshRates" title="Vuelve a buscar la tarifa de cada recurso en el Tarifario y el Presupuesto Comercial">🔄 Actualizar tarifas</button>
+    </div>
   </div>
   </div><!-- /viewCostos -->
 
@@ -849,9 +852,11 @@ async function persistAll() {
     }
     await storageSet('cronogramas2:current', state.currentId || '');
     saveIndicator('Guardado');
+    return true;
   } catch (e) {
     console.error('Error al guardar:', e);
     saveIndicator('⚠️ No se pudo guardar: ' + (e && e.message ? e.message : e), true);
+    return false;
   }
 }
 async function persistTarifario() {
@@ -908,6 +913,20 @@ function findTarifarioRate(name) {
   const key = name.trim().toLowerCase();
   const entry = state.tarifario.find(t => t.name.trim().toLowerCase() === key);
   return entry ? parseFloat(entry.rate) || null : null;
+}
+function findAnyRateHour(proj, name) {
+  // Primero busca por nombre de PERSONA en el Tarifario general. Si no aparece
+  // (ej. porque el "Responsable" es un nombre de ROL como "Gerente de Proyecto",
+  // no una persona), busca ese mismo nombre en el Presupuesto Comercial, que sí
+  // suele traer tarifas por rol.
+  const tar = findTarifarioRate(name);
+  if (tar) return tar;
+  if (proj && proj.commercialBudget && proj.commercialBudget.roles) {
+    const key = (name || '').trim().toLowerCase();
+    const entry = proj.commercialBudget.roles.find(r => (r.name || '').trim().toLowerCase() === key);
+    if (entry && parseFloat(entry.rate) > 0) return parseFloat(entry.rate);
+  }
+  return null;
 }
 function openTarifarioModal() { renderTarifarioModal(); document.getElementById('tarifarioModal').classList.add('open'); }
 function closeTarifarioModal() { document.getElementById('tarifarioModal').classList.remove('open'); }
@@ -1525,7 +1544,7 @@ function renderTaskTable() {
           if (name && name.trim()) {
             const trimmed = name.trim();
             if (!proj.resources.some(rr => rr.name.trim().toLowerCase() === trimmed.toLowerCase())) {
-              const tarRate = findTarifarioRate(trimmed);
+              const tarRate = findAnyRateHour(proj, trimmed);
               proj.resources.push({ name: trimmed, rate: tarRate ? Math.round(tarRate * (proj.hoursPerDay || 8)) : 0 });
             }
             t.resource = trimmed;
@@ -1538,7 +1557,7 @@ function renderTaskTable() {
           // "recurso" registrado en este proyecto, lo registramos solo, con su
           // tarifa — así aparece también en "Recursos y costos" sin pasos extra.
           if (inp.value && !proj.resources.some(rr => rr.name.trim().toLowerCase() === inp.value.trim().toLowerCase())) {
-            const tarRate = findTarifarioRate(inp.value);
+            const tarRate = findAnyRateHour(proj, inp.value);
             proj.resources.push({ name: inp.value, rate: tarRate ? Math.round(tarRate * (proj.hoursPerDay || 8)) : 0 });
           }
           t.resource = inp.value;
@@ -1655,7 +1674,7 @@ function renderResources() {
             proj.budget.roles.forEach(rr => { if ((rr.name || '').trim().toLowerCase() === oldKey) rr.name = newName; });
           }
           if (!res.rate || parseFloat(res.rate) === 0) {
-            const tarRate = findTarifarioRate(newName);
+            const tarRate = findAnyRateHour(proj, newName);
             if (tarRate) res.rate = Math.round(tarRate * (proj.hoursPerDay || 8));
           }
         }
@@ -2553,7 +2572,7 @@ function syncRealHoursFromSchedule() {
     let role = proj.budget.roles.find(rr => rr.name.trim().toLowerCase() === name.toLowerCase());
     if (!role) {
       const resMatch = proj.resources.find(rr => rr.name.trim().toLowerCase() === name.toLowerCase());
-      const tarRate = findTarifarioRate(name);
+      const tarRate = findAnyRateHour(proj, name);
       const rateHour = tarRate ? tarRate : (resMatch ? (parseFloat(resMatch.rate) || 0) / (proj.hoursPerDay || 8) : '');
       role = { name, occupancyPct: '', rate: rateHour, monthlyHours: new Array(n).fill(0), monthlyHoursReal: [] };
       proj.budget.roles.push(role);
@@ -2590,7 +2609,7 @@ function syncBudgetFromSchedule() {
     let role = proj.budget.roles.find(rr => rr.name.trim().toLowerCase() === name.toLowerCase());
     if (!role) {
       const resMatch = proj.resources.find(rr => rr.name.trim().toLowerCase() === name.toLowerCase());
-      const tarRate = findTarifarioRate(name);
+      const tarRate = findAnyRateHour(proj, name);
       const rateHour = tarRate ? tarRate : (resMatch ? (parseFloat(resMatch.rate) || 0) / (proj.hoursPerDay || 8) : '');
       role = { name, occupancyPct: '', rate: rateHour, monthlyHours: [], monthlyHoursReal: [] };
       proj.budget.roles.push(role);
@@ -2696,7 +2715,7 @@ function renderBudget() {
       inp.addEventListener('input', () => {
         role[field] = inp.value;
         if (field === 'name' && (!role.rate || parseFloat(role.rate) === 0)) {
-          const tarRate = findTarifarioRate(inp.value);
+          const tarRate = findAnyRateHour(proj, inp.value);
           if (tarRate) { role.rate = tarRate; }
           else {
             const match = proj.resources.find(rr => rr.name.trim().toLowerCase() === inp.value.trim().toLowerCase());
@@ -3086,9 +3105,10 @@ function importExcelScheduleFile(file) {
    Tiempo, Proyecto, Usuario, Correo, Empresa, Minutos, Squad, Fecha,
    Creación, Horas, Categoría — una fila por registro de tiempo.
    ============================================================ */
-function parseFollowUpDate(str) {
-  if (!str) return null;
-  const s = String(str).trim();
+function parseFollowUpDate(val) {
+  if (!val) return null;
+  if (Object.prototype.toString.call(val) === '[object Date]' && !isNaN(val.getTime())) return new Date(val.getFullYear(), val.getMonth(), val.getDate());
+  const s = String(val).trim();
   const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (!m) return null;
   const mo = parseInt(m[1]), d = parseInt(m[2]), y = parseInt(m[3]);
@@ -3100,10 +3120,11 @@ function importFollowUpHoursFile(file) {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
-      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
       let sheetRows = null;
       for (const sheetName of wb.SheetNames) {
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null });
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
+        const rowsRaw = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null, raw: true, cellDates: true });
         const headerIdx = rows.findIndex(r => r && r.some(c => c === 'idTarea') && r.some(c => c === 'Proyecto') && r.some(c => c === 'Usuario') && r.some(c => c === 'Horas'));
         if (headerIdx >= 0) {
           const header = rows[headerIdx];
@@ -3113,18 +3134,25 @@ function importFollowUpHoursFile(file) {
           const colHoras = header.indexOf('Horas');
           const parsed = [];
           for (let i = headerIdx + 1; i < rows.length; i++) {
-            const r = rows[i]; if (!r || !r[colProyecto]) continue;
+            const r = rows[i]; const rRaw = rowsRaw[i]; if (!r || !r[colProyecto]) continue;
             const horas = parseFloat(r[colHoras]);
             if (!horas) continue;
-            parsed.push({ proyecto: String(r[colProyecto]).trim(), usuario: String(r[colUsuario] || '').trim(), fecha: parseFollowUpDate(r[colFecha]), horas });
+            // Preferimos el valor "crudo" (con cellDates ya convierte la fecha nativa de Excel
+            // a un objeto Date real); si no es fecha, caemos al texto tipo "1/31/2026".
+            const fechaVal = (rRaw && Object.prototype.toString.call(rRaw[colFecha]) === '[object Date]') ? rRaw[colFecha] : r[colFecha];
+            parsed.push({ proyecto: String(r[colProyecto]).trim(), usuario: String(r[colUsuario] || '').trim(), fecha: parseFollowUpDate(fechaVal), horas });
           }
           sheetRows = parsed;
           break;
         }
       }
       if (!sheetRows || sheetRows.length === 0) { alert('No se reconoció el formato. Se espera una hoja con columnas idTarea, Proyecto, Usuario, Fecha y Horas (reporte de FollowUp/FollowUp).'); return; }
+      const sinFecha = sheetRows.filter(r => !r.fecha).length;
       _followupPendingRows = sheetRows;
       openFollowUpProjectModal(sheetRows);
+      if (sinFecha > 0 && sinFecha === sheetRows.length) {
+        setTimeout(() => alert('Aviso: no se pudo leer la fecha de ningún registro — revisa que la columna "Fecha" tenga fechas válidas.'), 200);
+      }
     } catch (err) {
       console.error(err);
       alert('No se pudo leer el archivo: ' + err.message);
@@ -3165,14 +3193,20 @@ function confirmFollowUpImport() {
   });
 
   const allUsers = Object.values(byUserMonth);
-  const matchedEntries = allUsers.filter(u => proj.budget.roles.some(rr => rr.name.trim().toLowerCase() === u.display.toLowerCase()));
-  const unmatchedNames = allUsers.filter(u => !matchedEntries.includes(u)).map(u => u.display);
-
-  if (matchedEntries.length === 0) {
-    alert('Ninguno de estos nombres de "Usuario" coincide con un recurso registrado en "Recursos y costos": ' + unmatchedNames.join(', ') + '.\n\nEl nombre debe ser exactamente igual (mayúsculas, espacios, etc.) al que aparece en el reporte. Agrega o corrige el recurso y vuelve a intentar.');
-    closeFollowUpProjectModal();
-    return;
-  }
+  const newlyAdded = [];
+  allUsers.forEach(u => {
+    const exists = proj.budget.roles.some(rr => rr.name.trim().toLowerCase() === u.display.toLowerCase());
+    if (!exists) {
+      const rateHour = findAnyRateHour(proj, u.display);
+      proj.budget.roles.push({
+        name: u.display, occupancyPct: '', rate: rateHour || '',
+        monthlyHours: new Array(proj.budget.duracionMeses || 1).fill(0),
+        monthlyHoursReal: new Array(proj.budget.duracionMeses || 1).fill(0)
+      });
+      newlyAdded.push(u.display);
+    }
+  });
+  const matchedEntries = allUsers;
 
   // Detectar el rango completo de meses con horas reales (incluidos los que caen
   // fuera de lo que ya tenías planeado), y extender el presupuesto para cubrirlos.
@@ -3220,7 +3254,7 @@ function confirmFollowUpImport() {
   saveIndicator('Horas reales importadas desde FollowUp');
   let msg = `Horas reales actualizadas para ${matchedCount} recurso(s), desde ${rows.length} registros.`;
   if (rangeExtended) msg += `\n\nAlgunas horas caían en meses que no tenías planeados — extendí el presupuesto a ${n} meses (desde ${proj.budget.startMonth}) para no perder esa información.`;
-  if (unmatchedNames.length) msg += `\n\nNo se encontraron en "Recursos y costos" (no se importaron sus horas): ${unmatchedNames.join(', ')}.`;
+  if (newlyAdded.length) msg += `\n\nEstas personas no estaban planeadas y las agregué como recurso nuevo (con tarifa desde el Tarifario/Presupuesto Comercial si se encontró): ${newlyAdded.join(', ')}.`;
   setTimeout(() => alert(msg), 150);
 }
 
@@ -3821,6 +3855,10 @@ document.getElementById('budgetDuracionMeses').addEventListener('input', (e) => 
 document.getElementById('budgetStartMonth').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.startMonth = e.target.value; renderBudget(); persistAll(); });
 document.getElementById('btnAddBudgetRole').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.budget.roles.push({ name: '', occupancyPct: '', rate: '', monthlyHours: new Array(proj.budget.duracionMeses).fill(0), monthlyHoursReal: new Array(proj.budget.duracionMeses).fill(0) }); renderBudget(); persistAll(); });
 document.getElementById('btnSyncFromSchedule').addEventListener('click', syncBudgetFromSchedule);
+document.getElementById('btnSaveBudgetExplicit').addEventListener('click', async () => {
+  const ok = await persistAll();
+  alert(ok ? 'Presupuesto guardado en este navegador.' : 'No se pudo guardar — revisa el mensaje de error arriba a la derecha (⚠️).');
+});
 document.getElementById('btnSyncRealFromSchedule').addEventListener('click', syncRealHoursFromSchedule);
 document.getElementById('btnImportFollowUp').addEventListener('click', () => document.getElementById('fileFollowUp').click());
 document.getElementById('fileFollowUp').addEventListener('change', (e) => { if (e.target.files[0]) { importFollowUpHoursFile(e.target.files[0]); e.target.value = ''; } });
@@ -3868,6 +3906,17 @@ document.getElementById('btnAddTask').addEventListener('click', () => {
   recalc(); renderAll_inner(); persistAll();
 });
 document.getElementById('btnAddResource').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.resources.push({ name: '', rate: 0 }); renderAll_inner(); persistAll(); });
+document.getElementById('btnRefreshRates').addEventListener('click', () => {
+  const proj = currentProject(); if (!proj) return;
+  let updated = 0;
+  proj.resources.forEach(res => {
+    if (parseFloat(res.rate) > 0) return;
+    const rateHour = findAnyRateHour(proj, res.name);
+    if (rateHour) { res.rate = Math.round(rateHour * (proj.hoursPerDay || 8)); updated++; }
+  });
+  renderAll_inner(); persistAll();
+  alert(updated > 0 ? `Se actualizó la tarifa de ${updated} recurso(s).` : 'No se encontró tarifa nueva para ningún recurso pendiente (revisa que el nombre coincida exacto con el Tarifario o el Presupuesto Comercial).');
+});
 document.getElementById('btnBaseline').addEventListener('click', () => {
   const proj = currentProject(); if (!proj) return;
   const label = prompt('Nombre para esta línea base (ej. "Aprobada por el cliente", "Antes del cambio de alcance"):', 'Línea base ' + new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }));
