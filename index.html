@@ -134,6 +134,7 @@
       <span class="save-indicator" id="storageModeIndicator"></span>
       <span class="save-indicator" id="saveIndicator"></span>
       <button class="btn btn-ghost btn-xs" id="btnOpenTarifario" title="Tarifas de personas, guardadas una sola vez para todos los proyectos">💵 Tarifario</button>
+      <button class="btn btn-ghost btn-xs" id="btnStorageDiagnostic" title="Comprobar si tu navegador está guardando los datos entre sesiones">🔍 Diagnóstico de guardado</button>
       <div style="position:relative;">
         <button class="btn btn-ghost btn-xs" id="btnBell" style="font-size:16px; padding:6px 10px; position:relative;">
           🔔<span id="bellBadge" style="display:none; position:absolute; top:-4px; right:-4px; background:var(--red); color:#fff; border-radius:10px; font-size:10px; padding:1px 5px; font-weight:700;"></span>
@@ -211,6 +212,8 @@ Fase 2: Migración
     </div>
     <p class="hint" style="margin-top:0;">Las horas por día solo afectan la conversión al exportar/importar con MS Project (.xml) — ahí Project guarda todo en horas. El cronograma en sí y los costos por recurso siempre se calculan en días hábiles.</p>
     <div id="customHolidaysList" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+    <button class="btn btn-ghost btn-xs" id="btnToggleComputedHolidays" style="margin-top:10px;">▶ Ver festivos colombianos calculados para este proyecto</button>
+    <div id="computedHolidaysList" style="display:none; margin-top:8px; gap:6px 10px; flex-wrap:wrap;"></div>
   </div>
 
   <div class="card">
@@ -422,6 +425,17 @@ Fase 2: Migración
   </div>
 </div>
 
+<div class="modal-overlay" id="storageDiagnosticModal">
+  <div class="modal-box" style="width:520px;">
+    <h2>🔍 Diagnóstico de guardado</h2>
+    <p class="hint2">Cada vez que abres esta página, queda una marca de tiempo aquí abajo. Si al volver a abrirla (sobre todo después de apagar el computador) sigues viendo las marcas de <b>días anteriores</b>, tu navegador SÍ está guardando bien — el problema estaría en otra parte. Si en cambio solo ves la marca de <b>hoy</b> (las de antes desaparecieron), tu navegador está borrando los datos del sitio al cerrarse — normalmente por una configuración de privacidad o una política de la empresa en el computador, no por la herramienta.</p>
+    <div id="storageDiagnosticList" style="max-height:260px; overflow-y:auto; margin:10px 0; border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-family:monospace; font-size:12.5px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCloseStorageDiagnostic">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="tarifarioModal">
   <div class="modal-box" style="width:560px;">
     <h2>💵 Tarifario</h2>
@@ -499,18 +513,23 @@ function computeEaster(year) {
 function moveToMonday(date) { const d = new Date(date); while (d.getDay() !== 1) d.setDate(d.getDate() + 1); return d; }
 function colombianHolidays(year) {
   const holidays = [];
-  const add = (d) => holidays.push(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
-  add(new Date(year, 0, 1)); add(new Date(year, 4, 1)); add(new Date(year, 6, 20));
-  add(new Date(year, 7, 7)); add(new Date(year, 11, 8)); add(new Date(year, 11, 25));
-  [[0,6],[2,19],[5,29],[7,15],[9,12],[10,1],[10,11]].forEach(([m,dd]) => add(moveToMonday(new Date(year, m, dd))));
+  const add = (d, name) => holidays.push({ date: new Date(d.getFullYear(), d.getMonth(), d.getDate()), name });
+  add(new Date(year, 0, 1), 'Año Nuevo');
+  add(new Date(year, 4, 1), 'Día del Trabajo');
+  add(new Date(year, 6, 20), 'Independencia de Colombia');
+  add(new Date(year, 7, 7), 'Batalla de Boyacá');
+  add(new Date(year, 11, 8), 'Inmaculada Concepción');
+  add(new Date(year, 11, 25), 'Navidad');
+  [[[0,6],'Reyes Magos'],[[2,19],'San José'],[[5,29],'San Pedro y San Pablo'],[[7,15],'Asunción de la Virgen'],[[9,12],'Día de la Raza'],[[10,1],'Todos los Santos'],[[10,11],'Independencia de Cartagena']]
+    .forEach(([[m, dd], name]) => add(moveToMonday(new Date(year, m, dd)), name));
   const easter = computeEaster(year);
-  const off = (n) => { const d = new Date(easter); d.setDate(d.getDate() + n); add(d); };
-  off(-3); off(-2); off(43); off(64); off(71);
+  const off = (n, name) => { const d = new Date(easter); d.setDate(d.getDate() + n); add(d, name); };
+  off(-3, 'Jueves Santo'); off(-2, 'Viernes Santo'); off(43, 'Ascensión del Señor'); off(64, 'Corpus Christi'); off(71, 'Sagrado Corazón');
   return holidays;
 }
 function buildHolidaySet(startYear, endYear) {
   const set = new Set();
-  for (let y = startYear; y <= endYear; y++) colombianHolidays(y).forEach(d => set.add(d.toDateString()));
+  for (let y = startYear; y <= endYear; y++) colombianHolidays(y).forEach(h => set.add(h.date.toDateString()));
   return set;
 }
 function isWorkingDay(date, hs) { const day = date.getDay(); if (day === 0 || day === 6) return false; if (hs.has(date.toDateString())) return false; return true; }
@@ -845,6 +864,36 @@ async function persistTarifario() {
     saveIndicator('⚠️ No se pudo guardar el tarifario: ' + (e && e.message ? e.message : e), true);
   }
 }
+async function recordSessionDiagnostic() {
+  try {
+    const r = await storageGet('cronogramas2:__sessions__');
+    let sessions = [];
+    try { sessions = r ? JSON.parse(r.value) : []; } catch (e) { sessions = []; }
+    sessions.push(new Date().toISOString());
+    if (sessions.length > 20) sessions = sessions.slice(-20);
+    await storageSet('cronogramas2:__sessions__', JSON.stringify(sessions));
+  } catch (e) { console.error('No se pudo registrar el diagnóstico de guardado:', e); }
+}
+async function openStorageDiagnosticModal() {
+  const list = document.getElementById('storageDiagnosticList');
+  list.textContent = 'Cargando…';
+  try {
+    const r = await storageGet('cronogramas2:__sessions__');
+    const sessions = r ? JSON.parse(r.value) : [];
+    if (sessions.length === 0) { list.textContent = 'No hay registros todavía.'; }
+    else {
+      const todayStr = new Date().toDateString();
+      list.innerHTML = sessions.slice().reverse().map(iso => {
+        const d = new Date(iso);
+        const isToday = d.toDateString() === todayStr;
+        return `<div style="padding:3px 0; ${isToday ? 'color:var(--gray);' : 'color:var(--green); font-weight:600;'}">${d.toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })}${!isToday ? ' ← de un día anterior' : ''}</div>`;
+      }).join('');
+    }
+  } catch (e) {
+    list.textContent = '⚠️ No se pudo leer el historial: ' + (e && e.message ? e.message : e);
+  }
+  document.getElementById('storageDiagnosticModal').classList.add('open');
+}
 async function loadTarifario() {
   try {
     const r = await storageGet('cronogramas2:tarifario');
@@ -1028,7 +1077,7 @@ function recalc() {
   ensureResourceRegistry(proj);
   const startDate = new Date(proj.start + 'T00:00:00');
   const startYear = startDate.getFullYear();
-  holidaySetGlobal = proj.includeColombianHolidays ? buildHolidaySet(startYear, startYear + 3) : new Set();
+  holidaySetGlobal = proj.includeColombianHolidays ? buildHolidaySet(startYear - 1, startYear + 6) : new Set();
   (proj.customHolidays || []).forEach(ds => { const d = new Date(ds + 'T00:00:00'); holidaySetGlobal.add(d.toDateString()); });
   const { results, wbsMap, hasChildren } = scheduleProjectV2(proj.tasks, startDate, holidaySetGlobal, proj.hoursPerDay || 8);
   scheduleResults = results; wbsMapGlobal = wbsMap; hasChildrenGlobal = hasChildren;
@@ -1255,6 +1304,7 @@ function buildTaskEditPanel(proj, t, r, isPhase, resourceNames) {
     fieldsHtml += field('Predecesoras (número de fila)', `<input type="text" data-efield="predText" value="${escapeHtml(t.predText||'')}" placeholder="ej. 2FS+3" style="${bigInputStyle}">`);
     fieldsHtml += field('% Avance real', `<input type="number" min="0" max="100" data-efield="completado" value="${t.completado ?? 0}" style="${bigInputStyle}">`);
     fieldsHtml += field('Fecha inicio manual (vacío = automática)', `<input type="date" data-efield="manualStart" value="${t.manualStart||''}" style="${bigInputStyle}">`);
+    fieldsHtml += field('Fecha fin manual (vacío = automática)', `<input type="date" data-efield="manualEnd" value="${t.manualEndDateTime ? t.manualEndDateTime.slice(0,10) : ''}" style="${bigInputStyle}">`);
     if (r) fieldsHtml += field('Fechas calculadas', `<div style="padding:9px 10px; font-size:13px; color:var(--charcoal); background:var(--gray-light); border-radius:7px;">${r.start.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})} → ${r.end.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})}</div>`);
   } else {
     const pp = computePhaseProgress(proj, t.id);
@@ -1272,8 +1322,9 @@ function wireTaskEditPanel(editTr, proj, t) {
     const field = inp.dataset.efield;
     const evName = inp.tagName === 'SELECT' ? 'change' : 'input';
     inp.addEventListener(evName, () => {
-      if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; }
+      if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; t.manualEndDateTime = ''; }
       else if (field === 'manualStart') { t.manualStart = inp.value; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
+      else if (field === 'manualEnd') { t.manualEndDateTime = inp.value ? inp.value + 'T16:59:59' : ''; }
       else if (field === 'predText') { t.predText = inp.value; t.manualStart = ''; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
       else t[field] = inp.value;
       if (evName === 'change') { recalc(); withScrollPreserved(renderAll_inner); persistAll(); } else { scheduleRecalcRender(); }
@@ -1284,6 +1335,30 @@ function wireTaskEditPanel(editTr, proj, t) {
 
 
 function closeDeleteTaskModal() { document.getElementById('deleteTaskModal').classList.remove('open'); }
+function renumberPredecessorsAfterDelete(proj, deletedIds) {
+  // Las predecesoras se guardan como "número de fila" (como en Project). Al eliminar
+  // tareas, las filas de abajo se recorren — así que hay que ajustar esos números en
+  // el resto de las tareas para que sigan apuntando a la tarea correcta (o quitar la
+  // referencia si la tarea eliminada era justo la predecesora).
+  const deletedNums = new Set();
+  deletedIds.forEach(id => { const n = wbsMapGlobal[id]; if (n) deletedNums.add(parseInt(n)); });
+  if (deletedNums.size === 0) return;
+  const sortedDeleted = Array.from(deletedNums).sort((a, b) => a - b);
+  proj.tasks.forEach(task => {
+    if (deletedIds.has(task.id) || !task.predText) return;
+    const parts = parsePredText(task.predText);
+    const newParts = [];
+    parts.forEach(p => {
+      const num = parseInt(p.wbs);
+      if (isNaN(num) || deletedNums.has(num)) return;
+      const shift = sortedDeleted.filter(d => d < num).length;
+      const typeSuffix = p.type === 'FS' ? '' : p.type;
+      const lagSuffix = p.lag ? (p.lag > 0 ? '+' : '') + p.lag : '';
+      newParts.push(`${num - shift}${typeSuffix}${lagSuffix}`);
+    });
+    task.predText = newParts.join(',');
+  });
+}
 function openDeleteTaskModal(proj, t, isPhase) {
   const modal = document.getElementById('deleteTaskModal');
   const title = document.getElementById('deleteTaskTitle');
@@ -1304,12 +1379,14 @@ function openDeleteTaskModal(proj, t, isPhase) {
   if (isPhase && directChildren.length > 0) {
     desc.textContent = `Esta fase tiene ${allDescendants.length} tarea(s) dentro. ¿Qué quieres hacer?`;
     addBtn('Eliminar solo esta fase (sus tareas suben de nivel)', 'btn-ghost', () => {
+      renumberPredecessorsAfterDelete(proj, new Set([t.id]));
       directChildren.forEach(c => { c.parentId = t.parentId; });
       proj.tasks = proj.tasks.filter(x => x.id !== t.id);
       recalc(); renderAll_inner(); persistAll();
     });
     addBtn(`Eliminar la fase y sus ${allDescendants.length} tarea(s)`, 'btn-accent', () => {
       const idsToRemove = new Set([t.id, ...allDescendants]);
+      renumberPredecessorsAfterDelete(proj, idsToRemove);
       proj.tasks = proj.tasks.filter(x => !idsToRemove.has(x.id));
       recalc(); renderAll_inner(); persistAll();
     });
@@ -1317,6 +1394,7 @@ function openDeleteTaskModal(proj, t, isPhase) {
   } else {
     desc.textContent = '¿Eliminar esta tarea? Esta acción no se puede deshacer.';
     addBtn('Eliminar', 'btn-accent', () => {
+      renumberPredecessorsAfterDelete(proj, new Set([t.id]));
       proj.tasks = proj.tasks.filter(x => x.id !== t.id);
       recalc(); renderAll_inner(); persistAll();
     });
@@ -1431,7 +1509,10 @@ function renderTaskTable() {
         <input type="date" data-field="manualStart" value="${t.manualStart || (r ? r.start.toISOString().slice(0,10) : '')}" style="font-size:11px; padding:3px; width:100%;" title="Esta fecha se calcula sola; cámbiala si quieres fijarla manualmente">
         <div style="font-size:9.5px; color:var(--orange); margin-top:2px; white-space:nowrap;">${r && r.manual ? '📌 fecha fijada' : ''}</div>
       `}</td>
-      <td style="font-size:12px; min-width:105px; white-space:nowrap;">${r ? r.end.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+      <td style="min-width:130px;">${isPhase ? `<span style="font-size:12px; white-space:nowrap;">${r ? r.end.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>` : `
+        <input type="date" data-field="manualEnd" value="${t.manualEndDateTime ? t.manualEndDateTime.slice(0,10) : (r ? r.end.toISOString().slice(0,10) : '')}" style="font-size:11px; padding:3px; width:100%;" title="Esta fecha se calcula sola (inicio + duración); cámbiala si quieres fijarla manualmente">
+        <div style="font-size:9.5px; color:var(--orange); margin-top:2px; white-space:nowrap;">${t.manualEndDateTime ? '📌 fecha fijada' : ''}</div>
+      `}</td>
       <td><span class="badge ${estadoClass}">${estado}</span></td>
       <td class="row-del" title="Eliminar tarea">🗑</td>
     `;
@@ -1461,8 +1542,9 @@ function renderTaskTable() {
             proj.resources.push({ name: inp.value, rate: tarRate ? Math.round(tarRate * (proj.hoursPerDay || 8)) : 0 });
           }
           t.resource = inp.value;
-        } else if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; }
+        } else if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; t.manualEndDateTime = ''; }
         else if (field === 'manualStart') { t.manualStart = inp.value; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
+        else if (field === 'manualEnd') { t.manualEndDateTime = inp.value ? inp.value + 'T16:59:59' : ''; }
         else if (field === 'predText') { t.predText = inp.value; t.manualStart = ''; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
         else t[field] = inp.type === 'checkbox' ? inp.checked : inp.value;
         if (evName === 'change') { recalc(); withScrollPreserved(renderAll_inner); persistAll(); } else { scheduleRecalcRender(); }
@@ -1997,6 +2079,26 @@ function renderCalendarSection() {
     list.appendChild(chip);
   });
   if ((proj.customHolidays || []).length === 0) list.innerHTML = '<span class="alert-empty">Sin festivos adicionales configurados.</span>';
+  renderComputedHolidaysList(proj);
+}
+function renderComputedHolidaysList(proj) {
+  const container = document.getElementById('computedHolidaysList');
+  if (container.style.display === 'none') return;
+  if (!proj.includeColombianHolidays) { container.innerHTML = '<span class="alert-empty">Los festivos colombianos están desactivados para este proyecto.</span>'; return; }
+  const startDate = proj.start ? new Date(proj.start + 'T00:00:00') : new Date();
+  const root = proj.tasks.find(t => !t.parentId);
+  const endResult = root && scheduleResults[root.id] ? scheduleResults[root.id].end : startDate;
+  const startYear = startDate.getFullYear(), endYear = Math.max(startYear, endResult.getFullYear());
+  let html = '';
+  for (let y = startYear; y <= endYear; y++) {
+    const holidays = colombianHolidays(y).sort((a, b) => a.date - b.date);
+    html += `<div style="margin-bottom:10px;"><div style="font-size:11px; color:var(--gray); text-transform:uppercase; margin-bottom:4px;">${y}</div><div style="display:flex; gap:6px; flex-wrap:wrap;">`;
+    holidays.forEach(h => {
+      html += `<span class="badge" style="background:var(--gray-light); color:var(--charcoal);" title="${escapeHtml(h.name)}">${h.date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })} · ${escapeHtml(h.name)}</span>`;
+    });
+    html += `</div></div>`;
+  }
+  container.innerHTML = html;
 }
 
 /* ============================================================
@@ -2185,17 +2287,12 @@ function importMSPDIFile(file) {
       const newProject = normalizeProject({
         name: projectName + ' (importado)', start: projStart.toISOString().slice(0, 10),
         baseline: null, resources, tasks,
-        includeColombianHolidays: false, customHolidays: importedHolidays,
+        includeColombianHolidays: true, customHolidays: [],
         hoursPerDay: importedHoursPerDay, _simpleIdMigration: true
       });
       state.projects.push(newProject); state.currentId = newProject.id;
       recalc(); renderAll_inner(); renderTabs(); persistAll();
-      saveIndicator('Importado desde MS Project');
-      if (importedHolidays.length === 0) {
-        alert('Se importó el cronograma. El archivo no traía festivos configurados en su calendario, así que quedó sin festivos adicionales (desactivé el calendario colombiano automático para respetar exactamente lo que venía en el XML). Si este proyecto sí es para Colombia, activa la casilla "Incluir festivos colombianos" arriba.');
-      } else {
-        saveIndicator(`Importado con ${importedHolidays.length} festivo(s) del archivo`);
-      }
+      saveIndicator('Importado desde MS Project (con festivos colombianos calculados automáticamente)');
     } catch (e) {
       console.error(e);
       alert('No se pudo importar el archivo. Asegúrate de exportarlo desde MS Project como "XML" (formato MSPDI), no como .mpp binario.\n\nDetalle: ' + e.message);
@@ -3750,6 +3847,8 @@ document.getElementById('fileImportComercial').addEventListener('change', (e) =>
 document.getElementById('btnClearComercial').addEventListener('click', clearComercialBudget);
 document.getElementById('btnExportComercial').addEventListener('click', exportComercialExcel);
 document.getElementById('btnOpenTarifario').addEventListener('click', openTarifarioModal);
+document.getElementById('btnStorageDiagnostic').addEventListener('click', openStorageDiagnosticModal);
+document.getElementById('btnCloseStorageDiagnostic').addEventListener('click', () => document.getElementById('storageDiagnosticModal').classList.remove('open'));
 document.getElementById('btnCloseTarifario').addEventListener('click', closeTarifarioModal);
 document.getElementById('btnImportTarifario').addEventListener('click', () => document.getElementById('fileImportTarifario').click());
 document.getElementById('fileImportTarifario').addEventListener('change', (e) => { if (e.target.files[0]) { importTarifarioFile(e.target.files[0]); e.target.value = ''; } });
@@ -3801,6 +3900,14 @@ document.getElementById('btnAddCustomHoliday').addEventListener('click', () => {
   if (!proj.customHolidays.includes(val)) proj.customHolidays.push(val);
   document.getElementById('customHolidayInput').value = '';
   recalc(); renderAll_inner(); persistAll();
+});
+document.getElementById('btnToggleComputedHolidays').addEventListener('click', () => {
+  const container = document.getElementById('computedHolidaysList');
+  const opening = container.style.display === 'none';
+  container.style.display = opening ? 'flex' : 'none';
+  container.style.flexDirection = 'column';
+  document.getElementById('btnToggleComputedHolidays').textContent = (opening ? '▼' : '▶') + ' Ver festivos colombianos calculados para este proyecto';
+  if (opening) { const proj = currentProject(); if (proj) renderComputedHolidaysList(proj); }
 });
 document.getElementById('btnExportJson').addEventListener('click', exportJSON);
 document.getElementById('btnImportJson').addEventListener('click', () => document.getElementById('fileImportJson').click());
@@ -3895,6 +4002,7 @@ function buildCoopenaeProject() {
     w.style.display = 'block';
   }
   initClaudeChatVisibility();
+  await recordSessionDiagnostic();
   await loadTarifario();
   const loaded = await loadAll();
   if (!loaded) {
