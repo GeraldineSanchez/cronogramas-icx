@@ -47,7 +47,7 @@
   .row-del:hover{color:var(--red);}
   .row-phase td{background:#F7F8FA; font-weight:600;}
   .task-name-cell{display:flex; align-items:center; gap:3px;}
-  .task-name-cell input[type="text"]{flex:1 1 220px; min-width:180px; width:auto;}
+  .task-name-cell input[type="text"]{flex:1 1 380px; min-width:320px; width:auto;}
   .indent-btn{width:15px; height:15px; font-size:9px;}
   .indent-controls{display:flex; gap:2px; flex-shrink:0;}
   .indent-btn{border:1px solid var(--border); background:#fff; border-radius:4px; width:18px; height:18px; font-size:10px; line-height:1; cursor:pointer; color:var(--gray); display:flex; align-items:center; justify-content:center;}
@@ -1475,7 +1475,7 @@ function renderTaskTable() {
             <button class="indent-btn" data-act="in" title="Anidar en la tarea anterior (indent)">→</button>
             <button class="indent-btn" data-act="addsibling" title="Agregar tarea justo después de esta">+</button>
           </div>
-          <input type="text" data-field="name" value="${escapeHtml(t.name || '')}" placeholder="Nombre de la tarea" style="font-weight:${isPhase ? 700 : 400};">
+          <input type="text" data-field="name" value="${escapeHtml(t.name || '')}" placeholder="Nombre de la tarea" title="${escapeHtml(t.name || '')}" style="font-weight:${isPhase ? 700 : 400};">
           ${t.notas ? `<span title="${escapeHtml(t.notas)}" style="cursor:help; color:var(--orange); font-size:13px;">📝</span>` : ''}
           ${isPhase ? `<button class="btn btn-ghost btn-xs" data-act="addsub" title="Agregar subtarea directamente en esta fase">+ Subtarea</button>` : ''}
         </div>
