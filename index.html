@@ -800,6 +800,7 @@ function migratePredTextToSimpleIds(p) {
   p._simpleIdMigration = true;
 }
 function normalizeProject(p) {
+  p.id = p.id || uid();
   p.tasks = (p.tasks || []).map(normalizeTask);
   migratePredTextToSimpleIds(p);
   p.resources = p.resources || [];
@@ -1030,6 +1031,41 @@ function importTarifarioFile(file) {
     }
   };
   reader.readAsArrayBuffer(file);
+}
+async function repairBrokenProjectKeys() {
+  // Repara datos guardados bajo una clave rota (p.ej. "cronogramas2:project:undefined")
+  // que quedaron así por un bug antiguo al crear proyectos sin ID. No borra nada: si logra
+  // repararlo, le asigna un ID válido y lo reinserta en el índice; si no puede, lo deja intacto.
+  try {
+    const idxRes = await storageGet('cronogramas2:index');
+    let ids = idxRes ? JSON.parse(idxRes.value) : [];
+    let changed = false;
+    const validIds = new Set(ids.filter(Boolean));
+    const brokenKeys = ['cronogramas2:project:undefined', 'cronogramas2:project:null'];
+    for (const key of brokenKeys) {
+      let raw = null;
+      try { raw = localStorage.getItem(key); } catch (e) {}
+      if (!raw) continue;
+      try {
+        const data = JSON.parse(raw);
+        const newId = uid();
+        data.id = newId;
+        await storageSet('cronogramas2:project:' + newId, JSON.stringify(data));
+        localStorage.removeItem(key);
+        validIds.add(newId);
+        changed = true;
+        console.warn('Reparado: ' + key + ' → cronogramas2:project:' + newId + ' ("' + (data.name || 'sin nombre') + '")');
+      } catch (e) { console.error('No se pudo reparar ' + key + ':', e); }
+    }
+    ids = ids.filter(Boolean);
+    validIds.forEach(id => { if (!ids.includes(id)) ids.push(id); });
+    if (changed) {
+      await storageSet('cronogramas2:index', JSON.stringify(ids));
+      setTimeout(() => alert('✅ Se recuperó un cronograma que había quedado con un identificador dañado. Ya debería aparecer de nuevo en las pestañas — revísalo y, si todo está bien, exporta un respaldo con "Exportar JSON" por seguridad.'), 400);
+    } else if (ids.some((id, i) => id !== (idxRes ? JSON.parse(idxRes.value)[i] : id))) {
+      await storageSet('cronogramas2:index', JSON.stringify(ids));
+    }
+  } catch (e) { console.error('repairBrokenProjectKeys falló:', e); }
 }
 async function loadAll() {
   try {
@@ -4083,6 +4119,7 @@ function buildCoopenaeProject() {
   initClaudeChatVisibility();
   await recordSessionDiagnostic();
   await loadTarifario();
+  await repairBrokenProjectKeys();
   const loaded = await loadAll();
   if (!loaded) {
     const coopenae = normalizeProject(buildCoopenaeProject());
