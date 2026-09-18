@@ -164,15 +164,20 @@
       <button class="btn btn-ghost" id="btnClientMode">🙈 Modo cliente (ocultar costos)</button>
       <button class="btn btn-accent" id="btnBaseline">Guardar línea base</button>
       <button class="btn btn-ghost" id="btnClearBaseline">Quitar línea base</button>
-      <button class="btn btn-ghost" id="btnBaselineHistory">📜 Historial de líneas base</button>
-      <button class="btn btn-primary" id="btnExportPdf">📄 Exportar PDF</button>
-      <button class="btn btn-ghost" id="btnExportMspdi">🗂️ Exportar a MS Project (.xml)</button>
-      <button class="btn btn-primary" id="btnExportTasksExcel">📊 Exportar cronograma a Excel</button>
-      <button class="btn btn-ghost" id="btnImportMspdi">📥 Importar desde MS Project (.xml)</button>
-      <button class="btn btn-ghost" id="btnImportExcelSchedule">📥 Importar cronograma desde Excel</button>
+      <div style="position:relative;">
+        <button class="btn btn-ghost" id="btnMoreOptions">⋮ Más opciones</button>
+        <div id="moreOptionsPanel" style="display:none; position:absolute; left:0; top:36px; z-index:100; background:#fff; border:1px solid var(--border); border-radius:10px; box-shadow:0 12px 30px rgba(0,0,0,.15); padding:10px; flex-direction:column; gap:6px; min-width:270px;">
+          <button class="btn btn-ghost" id="btnBaselineHistory" style="text-align:left; width:100%;">📜 Historial de líneas base</button>
+          <button class="btn btn-primary" id="btnExportPdf" style="text-align:left; width:100%;">📄 Exportar PDF</button>
+          <button class="btn btn-ghost" id="btnExportMspdi" style="text-align:left; width:100%;">🗂️ Exportar a MS Project (.xml)</button>
+          <button class="btn btn-primary" id="btnExportTasksExcel" style="text-align:left; width:100%;">📊 Exportar cronograma a Excel</button>
+          <button class="btn btn-ghost" id="btnImportMspdi" style="text-align:left; width:100%;">📥 Importar desde MS Project (.xml)</button>
+          <button class="btn btn-ghost" id="btnImportExcelSchedule" style="text-align:left; width:100%;">📥 Importar cronograma desde Excel</button>
+          <button class="btn btn-ghost" id="btnExportJson" style="text-align:left; width:100%;">💾 Exportar JSON</button>
+          <button class="btn btn-ghost" id="btnImportJson" style="text-align:left; width:100%;">📤 Importar JSON</button>
+        </div>
+      </div>
       <input type="file" id="fileImportExcelSchedule" accept=".xlsx,.xls" style="display:none;">
-      <button class="btn btn-ghost" id="btnExportJson">💾 Exportar JSON</button>
-      <button class="btn btn-ghost" id="btnImportJson">📤 Importar JSON</button>
       <input type="file" id="fileImportMspdi" accept=".xml" style="display:none;">
       <input type="file" id="fileImportJson" accept=".json" style="display:none;">
       <span class="save-indicator" id="baselineInfo"></span>
@@ -1030,8 +1035,18 @@ async function loadAll() {
   try {
     const idxRes = await storageGet('cronogramas2:index');
     if (!idxRes) return false;
-    const ids = JSON.parse(idxRes.value); const projects = [];
-    for (const id of ids) { try { const r = await storageGet('cronogramas2:project:' + id); if (r) { const p = normalizeProject(JSON.parse(r.value)); projects.push(p); } } catch (e) {} }
+    const ids = JSON.parse(idxRes.value); const projects = []; const failedIds = [];
+    for (const id of ids) {
+      try {
+        const r = await storageGet('cronogramas2:project:' + id);
+        if (r) { const p = normalizeProject(JSON.parse(r.value)); projects.push(p); }
+        else { failedIds.push(id); }
+      } catch (e) { console.error('No se pudo cargar el proyecto ' + id + ':', e); failedIds.push(id); }
+    }
+    if (failedIds.length > 0) {
+      console.warn('Proyecto(s) guardados que no se pudieron leer (posible dato dañado):', failedIds);
+      setTimeout(() => alert('⚠️ Aviso: ' + failedIds.length + ' cronograma(s) que tenías guardados no se pudieron cargar (los datos podrían estar dañados o incompletos).\n\nNo desaparecieron de tu navegador todavía, pero no se muestran en las pestañas. Antes de seguir trabajando, exporta un respaldo con "Exportar JSON" de cualquier proyecto que SÍ veas, y avísale a soporte/Claude con este mensaje para revisarlo.'), 600);
+    }
     if (projects.length === 0) return false;
     state.projects = projects;
     let cur = ''; try { const c = await storageGet('cronogramas2:current'); if (c) cur = c.value; } catch (e) {}
@@ -2505,6 +2520,20 @@ document.addEventListener('click', (e) => {
   const panel = document.getElementById('bellPanel');
   if (panel.style.display === 'block' && !panel.contains(e.target) && e.target.id !== 'btnBell') panel.style.display = 'none';
 });
+document.getElementById('btnMoreOptions').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const panel = document.getElementById('moreOptionsPanel');
+  panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+});
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('moreOptionsPanel');
+  if (panel.style.display === 'flex' && !panel.contains(e.target) && e.target.id !== 'btnMoreOptions') panel.style.display = 'none';
+});
+// Cierra el menú "Más opciones" automáticamente después de usar cualquier botón de adentro,
+// para que no se quede abierto tapando la pantalla tras exportar/importar.
+document.getElementById('moreOptionsPanel').addEventListener('click', (e) => {
+  if (e.target.tagName === 'BUTTON') setTimeout(() => { document.getElementById('moreOptionsPanel').style.display = 'none'; }, 150);
+});
 
 /* ============================================================
    SINCRONIZAR PRESUPUESTO CON EL CRONOGRAMA (tipo uso de recursos de Project)
@@ -3079,9 +3108,10 @@ function importExcelScheduleFile(file) {
       tasks.forEach(t => { if (t.resource) resourceNames.add(t.resource); });
       const resources = Array.from(resourceNames).map(name => ({ name, rate: 0 }));
 
-      const rootName = tasks[0] && tasks[0].name ? tasks[0].name : 'Cronograma importado';
+      const fileBaseName = (file.name || '').replace(/\.(xlsx|xls)$/i, '').trim();
+      const rootName = fileBaseName || (tasks[0] && tasks[0].name) || 'Cronograma importado';
       const p = normalizeProject({
-        name: rootName + ' (Excel importado)',
+        name: rootName,
         start: projectStart ? projectStart.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
         baseline: null, resources, tasks, _simpleIdMigration: true
       });
