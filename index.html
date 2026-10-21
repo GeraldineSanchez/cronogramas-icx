@@ -47,12 +47,23 @@
   .row-del:hover{color:var(--red);}
   .row-phase td{background:#F7F8FA; font-weight:600;}
   .task-name-cell{display:flex; align-items:center; gap:3px;}
-  .task-name-cell input[type="text"]{flex:1 1 380px; min-width:320px; width:auto;}
+  .task-name-cell input[type="text"]{flex:1 1 160px; min-width:110px; width:auto;}
   .indent-btn{width:15px; height:15px; font-size:9px;}
   .indent-controls{display:flex; gap:2px; flex-shrink:0;}
   .indent-btn{border:1px solid var(--border); background:#fff; border-radius:4px; width:18px; height:18px; font-size:10px; line-height:1; cursor:pointer; color:var(--gray); display:flex; align-items:center; justify-content:center;}
   .indent-btn:hover{border-color:var(--orange); color:var(--orange);}
   .wbs-tag{font-size:10.5px; color:var(--gray); width:34px; flex-shrink:0;}
+  #taskRowMenu .indent-btn{width:100%; height:auto; padding:6px 8px; justify-content:flex-start; gap:6px; font-size:12.5px; border-radius:6px;}
+  #taskRowMenu .indent-btn:hover{background:var(--gray-light);}
+  #tasksTableWrap table{table-layout:fixed; width:100%;}
+  .task-name-ta{flex:1 1 auto; min-width:0; width:100%; resize:none; overflow:hidden; border:1px solid var(--border); border-radius:6px; padding:4px 6px; font-family:inherit; font-size:12px; line-height:1.3; white-space:normal; word-break:break-word; background:#fff;}
+  .task-name-ta:focus{outline:none; border-color:var(--orange);}
+  #tasksTableWrap input[type="date"]{padding:2px 2px; min-width:0;}
+  #tasksTableWrap th, #tasksTableWrap td{padding:4px 3px; font-size:11.5px; overflow-wrap:anywhere;}
+  #tasksTableWrap th{white-space:normal; line-height:1.2; word-break:normal; overflow-wrap:normal;}
+  #tasksTableWrap select{width:100%; min-width:0 !important; max-width:100%; text-overflow:ellipsis;}
+  #tasksTableWrap td input[type="text"]{width:100%; min-width:0;}
+  #tasksTableWrap select, #tasksTableWrap input[type="text"], #tasksTableWrap input[type="number"], #tasksTableWrap input[type="date"]{font-size:11px;}
   .milestone-chk{flex-shrink:0;}
   .add-row{margin-top:10px; display:flex; gap:8px;}
   .section-title{font-size:14px; font-weight:700; color:var(--navy); margin:0 0 12px 0; display:flex; align-items:center; gap:8px;}
@@ -256,26 +267,35 @@ Fase 2: Migración
       <button class="btn btn-ghost" id="btnExpandAllPhases" title="Ver todas las fases con sus tareas">▼ Ver todo</button>
       <span class="save-indicator" id="filterCount"></span>
     </div>
-    <div style="overflow-x:auto;">
+    <div id="tasksTableWrap" style="overflow-x:hidden;">
     <table>
       <thead>
         <tr>
-          <th style="width:36px;" title="Número de fila, como el ID de Project">N°</th>
-          <th style="min-width:280px;">Tarea</th>
-          <th style="width:60px;">Días</th>
-          <th style="width:90px;">% Avance real</th>
-          <th style="width:90px;">% Avance esperado</th>
-          <th style="width:70px;">Desviación</th>
-          <th style="min-width:150px;">Responsable</th>
-          <th style="width:110px;" title="Ej: 2  |  2FS+3  |  2SS-1  |  2FF">Predecesoras</th>
-          <th class="col-med">Inicio</th>
-          <th class="col-med">Fin</th>
-          <th class="col-med">Estado</th>
-          <th style="width:26px;"></th>
+          <th style="width:30px;" title="Número de fila, como el ID de Project">N°</th>
+          <th>Tarea</th>
+          <th style="width:36px;">Días</th>
+          <th style="width:74px;">% Avance real</th>
+          <th style="width:78px;">% Avance esperado</th>
+          <th style="width:74px;">Desviación</th>
+          <th style="width:120px;">Responsable</th>
+          <th style="width:84px;" title="Ej: 2  |  2FS+3  |  2SS-1  |  2FF">Predec.</th>
+          <th style="width:108px;">Inicio</th>
+          <th style="width:108px;">Fin</th>
+          <th style="width:60px;">Estado</th>
+          <th style="width:20px;"></th>
         </tr>
       </thead>
       <tbody id="taskBody"></tbody>
     </table>
+    </div>
+    <div id="taskRowMenu" style="display:none; position:fixed; z-index:200; background:#fff; border:1px solid var(--border); border-radius:10px; box-shadow:0 12px 30px rgba(0,0,0,.15); padding:6px; flex-direction:column; gap:2px; min-width:200px;">
+      <button class="indent-btn" data-menu-act="expand">✎ Editar en panel ampliado</button>
+      <button class="indent-btn" data-menu-act="up">↑ Mover arriba</button>
+      <button class="indent-btn" data-menu-act="down">↓ Mover abajo</button>
+      <button class="indent-btn" data-menu-act="out">← Quitar nivel (outdent)</button>
+      <button class="indent-btn" data-menu-act="in">→ Anidar (indent)</button>
+      <button class="indent-btn" data-menu-act="addsibling">+ Agregar tarea después</button>
+      <button class="indent-btn" data-menu-act="addsub" style="display:none;">+ Agregar subtarea en esta fase</button>
     </div>
     <div class="add-row" style="align-items:center; gap:10px;">
       <button class="btn btn-accent" id="btnAddTask">+ Agregar tarea</button>
@@ -295,6 +315,7 @@ Fase 2: Migración
       <div id="indirectosPanel" style="display:none; margin-top:10px; background:var(--gray-light); border-radius:8px; padding:12px;"></div>
     </div>
     <div class="toolbar" style="margin:6px 0 10px 0;">
+      <div class="field"><label>Ingreso total del proyecto</label><input type="text" id="budgetIngresoTotal" placeholder="Ej. 480000000" style="width:160px;" title="Escribe el ingreso total y los meses: el valor mensual se calcula y se aplica solo"></div>
       <div class="field"><label>Ingreso mensual (para aplicar parejo)</label><input type="text" id="budgetIngresos" placeholder="Ej. 80000000" style="width:160px;"></div>
       <button class="btn btn-ghost btn-xs" id="btnApplyFlatIngreso" style="padding:8px 12px;">Aplicar a todos los meses</button>
       <div class="field"><label>Duración (meses)</label><input type="number" id="budgetDuracionMeses" min="1" max="60" style="width:90px;"></div>
@@ -352,6 +373,7 @@ Fase 2: Migración
         Sube aquí el mismo Excel de presupuesto que te entrega el equipo comercial (tiene el mismo formato que el de "Presupuesto y costos"). Queda guardado como <b>referencia fija</b> — no se recalcula con el cronograma — para comparar contra lo que realmente se está ejecutando en la pestaña "💰 Presupuesto y costos".
       </p>
       <div class="toolbar" style="margin-bottom:10px;">
+        <button class="btn btn-ghost" id="btnDownloadTemplateComercial" title="Descarga un Excel en blanco con el formato exacto que la herramienta sabe leer">📄 Descargar plantilla PYG comercial</button>
         <button class="btn btn-accent" id="btnImportComercial">📥 Importar Excel de comercial</button>
         <input type="file" id="fileImportComercial" accept=".xlsx,.xls" style="display:none;">
         <button class="btn btn-ghost" id="btnClearComercial">🗑️ Quitar presupuesto comercial</button>
@@ -1484,7 +1506,63 @@ function getAllDescendantIds(proj, taskId) {
 
 let expandedTaskIds = new Set();
 let selectedTaskId = null;
+function autosizeTaskNames() {
+  document.querySelectorAll('#taskBody textarea.task-name-ta').forEach(ta => {
+    ta.style.height = 'auto';
+    if (ta.scrollHeight > 0) ta.style.height = (ta.scrollHeight + 2) + 'px';
+  });
+}
+document.getElementById('taskBody').addEventListener('input', (e) => {
+  if (e.target.classList && e.target.classList.contains('task-name-ta')) { e.target.style.height = 'auto'; e.target.style.height = (e.target.scrollHeight + 2) + 'px'; }
+});
+document.getElementById('taskBody').addEventListener('keydown', (e) => {
+  if (e.target.classList && e.target.classList.contains('task-name-ta') && e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+});
+window.addEventListener('resize', () => autosizeTaskNames());
+function hideTaskRowMenu() { const menu = document.getElementById('taskRowMenu'); if (menu) { menu.style.display = 'none'; delete menu.dataset.taskId; } }
+function showTaskRowMenu(btn, taskId, isPhase) {
+  const menu = document.getElementById('taskRowMenu');
+  menu.dataset.taskId = taskId;
+  menu.style.display = 'flex';
+  const addSub = menu.querySelector('[data-menu-act="addsub"]');
+  if (addSub) addSub.style.display = isPhase ? 'flex' : 'none';
+  const rect = btn.getBoundingClientRect();
+  menu.style.top = (rect.bottom + 4) + 'px';
+  menu.style.left = rect.left + 'px';
+  requestAnimationFrame(() => {
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    if (rect.left + mw > window.innerWidth) menu.style.left = Math.max(4, window.innerWidth - mw - 8) + 'px';
+    if (rect.bottom + 4 + mh > window.innerHeight) menu.style.top = Math.max(4, rect.top - mh - 4) + 'px';
+  });
+}
+document.getElementById('taskRowMenu').addEventListener('click', (e) => {
+  const actBtn = e.target.closest('[data-menu-act]'); if (!actBtn) return;
+  const menu = document.getElementById('taskRowMenu');
+  const proj = currentProject(); const taskId = menu.dataset.taskId;
+  const t = proj && proj.tasks.find(x => x.id === taskId);
+  hideTaskRowMenu();
+  if (!proj || !t) return;
+  const act = actBtn.dataset.menuAct;
+  if (act === 'expand') { if (expandedTaskIds.has(t.id)) expandedTaskIds.delete(t.id); else expandedTaskIds.add(t.id); renderTaskTable(); }
+  else if (act === 'up') { if (moveTaskUp(proj, t)) { renderAll_inner(); persistAll(); } }
+  else if (act === 'down') { if (moveTaskDown(proj, t)) { renderAll_inner(); persistAll(); } }
+  else if (act === 'out') { if (t.parentId) { outdentTask(proj, t); recalc(); renderAll_inner(); persistAll(); } }
+  else if (act === 'in') { if (indentTask(proj, t)) { recalc(); renderAll_inner(); persistAll(); } }
+  else if (act === 'addsibling') { insertSiblingAfter(proj, t); recalc(); renderAll_inner(); persistAll(); }
+  else if (act === 'addsub') {
+    const newTask = normalizeTask({ parentId: t.id });
+    const idx = proj.tasks.indexOf(t);
+    proj.tasks.splice(idx + 1, 0, newTask);
+    recalc(); renderAll_inner(); persistAll();
+  }
+});
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('taskRowMenu');
+  if (menu.style.display === 'flex' && !menu.contains(e.target) && !e.target.closest('[data-act="rowmenu"]')) hideTaskRowMenu();
+});
+document.addEventListener('scroll', hideTaskRowMenu, true);
 function renderTaskTable() {
+  hideTaskRowMenu();
   const proj = currentProject(); const tbody = document.getElementById('taskBody'); tbody.innerHTML = '';
   if (!proj || proj.tasks.length === 0) {
     tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><div class="big">🗓️</div>Aún no hay tareas. Agrega la primera con "+ Agregar tarea".</div></td></tr>`;
@@ -1516,19 +1594,13 @@ function renderTaskTable() {
     tr.innerHTML = `
       <td class="wbs-tag">${wbs}</td>
       <td>
-        <div class="task-name-cell" style="padding-left:${depth * 16}px;">
+        <div class="task-name-cell" style="padding-left:${depth * 12}px;">
           ${isPhase ? `<button class="indent-btn" data-act="collapsePhase" title="${collapsedPhaseIds.has(t.id) ? 'Mostrar las tareas de esta fase' : 'Ocultar las tareas de esta fase (ver solo la fase)'}" style="background:${collapsedPhaseIds.has(t.id) ? 'var(--navy)' : '#fff'}; color:${collapsedPhaseIds.has(t.id) ? '#fff' : 'var(--navy)'};">${collapsedPhaseIds.has(t.id) ? '▶' : '▼'}</button>` : ''}
           <div class="indent-controls">
-            <button class="indent-btn" data-act="expand" title="Editar en panel ampliado" style="background:${expandedTaskIds.has(t.id) ? 'var(--orange)' : '#fff'}; color:${expandedTaskIds.has(t.id) ? '#fff' : 'var(--gray)'};">${expandedTaskIds.has(t.id) ? '▲' : '✎'}</button>
-            <button class="indent-btn" data-act="up" title="Mover arriba">↑</button>
-            <button class="indent-btn" data-act="down" title="Mover abajo">↓</button>
-            <button class="indent-btn" data-act="out" title="Quitar nivel (outdent)">←</button>
-            <button class="indent-btn" data-act="in" title="Anidar en la tarea anterior (indent)">→</button>
-            <button class="indent-btn" data-act="addsibling" title="Agregar tarea justo después de esta">+</button>
+            <button class="indent-btn" data-act="rowmenu" title="Más acciones: editar, mover, anidar, agregar">⋮</button>
           </div>
-          <input type="text" data-field="name" value="${escapeHtml(t.name || '')}" placeholder="Nombre de la tarea" title="${escapeHtml(t.name || '')}" style="font-weight:${isPhase ? 700 : 400};">
+          <textarea class="task-name-ta" rows="1" data-field="name" placeholder="Nombre de la tarea" title="${escapeHtml(t.name || '')}" style="font-weight:${isPhase ? 700 : 400};">${escapeHtml(t.name || '')}</textarea>
           ${t.notas ? `<span title="${escapeHtml(t.notas)}" style="cursor:help; color:var(--orange); font-size:13px;">📝</span>` : ''}
-          ${isPhase ? `<button class="btn btn-ghost btn-xs" data-act="addsub" title="Agregar subtarea directamente en esta fase">+ Subtarea</button>` : ''}
         </div>
       </td>
       <td style="text-align:center; font-size:12.5px; color:var(--charcoal);">${(() => {
@@ -1575,18 +1647,18 @@ function renderTaskTable() {
         <option value="__new__">+ Nuevo recurso…</option>
       </select></td>
       <td>${isPhase ? '' : `<input type="text" data-field="predText" value="${escapeHtml(t.predText || '')}" placeholder="ej. 2FS+3" style="font-size:12px;">`}</td>
-      <td style="min-width:130px;">${isPhase ? `<span style="font-size:12px; white-space:nowrap;">${r ? r.start.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>` : `
+      <td style="min-width:130px;">${isPhase ? `<span style="font-size:12px; white-space:nowrap;">${r ? r.start.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</span>` : `
         <input type="date" data-field="manualStart" value="${t.manualStart || (r ? r.start.toISOString().slice(0,10) : '')}" style="font-size:11px; padding:3px; width:100%;" title="Esta fecha se calcula sola; cámbiala si quieres fijarla manualmente">
         <div style="font-size:9.5px; color:var(--orange); margin-top:2px; white-space:nowrap;">${r && r.manual ? '📌 fecha fijada' : ''}</div>
       `}</td>
-      <td style="min-width:130px;">${isPhase ? `<span style="font-size:12px; white-space:nowrap;">${r ? r.end.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>` : `
+      <td style="min-width:130px;">${isPhase ? `<span style="font-size:12px; white-space:nowrap;">${r ? r.end.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</span>` : `
         <input type="date" data-field="manualEnd" value="${t.manualEndDateTime ? t.manualEndDateTime.slice(0,10) : (r ? r.end.toISOString().slice(0,10) : '')}" style="font-size:11px; padding:3px; width:100%;" title="Esta fecha se calcula sola (inicio + duración); cámbiala si quieres fijarla manualmente">
         <div style="font-size:9.5px; color:var(--orange); margin-top:2px; white-space:nowrap;">${t.manualEndDateTime ? '📌 fecha fijada' : ''}</div>
       `}</td>
       <td><span class="badge ${estadoClass}">${estado}</span></td>
       <td class="row-del" title="Eliminar tarea">🗑</td>
     `;
-    tr.querySelectorAll('input[data-field], select[data-field]').forEach(inp => {
+    tr.querySelectorAll('input[data-field], select[data-field], textarea[data-field]').forEach(inp => {
       const field = inp.dataset.field;
       const evName = (inp.tagName === 'SELECT' || inp.type === 'checkbox') ? 'change' : 'input';
       inp.addEventListener(evName, () => {
@@ -1620,24 +1692,9 @@ function renderTaskTable() {
         if (evName === 'change') { recalc(); withScrollPreserved(renderAll_inner); persistAll(); } else { scheduleRecalcRender(); }
       });
     });
-    tr.querySelector('[data-act="in"]').addEventListener('click', () => { if (indentTask(proj, t)) { recalc(); renderAll_inner(); persistAll(); } });
-    tr.querySelector('[data-act="out"]').addEventListener('click', () => { if (t.parentId) { outdentTask(proj, t); recalc(); renderAll_inner(); persistAll(); } });
-    tr.querySelector('[data-act="up"]').addEventListener('click', () => { if (moveTaskUp(proj, t)) { renderAll_inner(); persistAll(); } });
-    tr.querySelector('[data-act="down"]').addEventListener('click', () => { if (moveTaskDown(proj, t)) { renderAll_inner(); persistAll(); } });
-    tr.querySelector('[data-act="addsibling"]').addEventListener('click', () => { insertSiblingAfter(proj, t); recalc(); renderAll_inner(); persistAll(); });
-    const addSubBtn = tr.querySelector('[data-act="addsub"]');
-    if (addSubBtn) addSubBtn.addEventListener('click', () => {
-      const newTask = normalizeTask({ parentId: t.id });
-      const idx = proj.tasks.indexOf(t);
-      proj.tasks.splice(idx + 1, 0, newTask);
-      recalc(); renderAll_inner(); persistAll();
-    });
+    tr.querySelector('[data-act="rowmenu"]').addEventListener('click', (e) => { e.stopPropagation(); showTaskRowMenu(e.currentTarget, t.id, isPhase); });
     tr.querySelector('.row-del').addEventListener('click', () => {
       openDeleteTaskModal(proj, t, isPhase);
-    });
-    tr.querySelector('[data-act="expand"]').addEventListener('click', () => {
-      if (expandedTaskIds.has(t.id)) expandedTaskIds.delete(t.id); else expandedTaskIds.add(t.id);
-      renderTaskTable();
     });
     const collapseBtn = tr.querySelector('[data-act="collapsePhase"]');
     if (collapseBtn) collapseBtn.addEventListener('click', () => {
@@ -1658,6 +1715,7 @@ function renderTaskTable() {
       wireTaskEditPanel(editTr, proj, t);
     }
   });
+  autosizeTaskNames();
   const filterCountEl = document.getElementById('filterCount');
   const hintEl = document.getElementById('addTaskHint');
   const selTask = selectedTaskId ? proj.tasks.find(t => t.id === selectedTaskId) : null;
@@ -2716,8 +2774,8 @@ function buildRoleMonthlyPanel(proj, role, n) {
       <td style="font-size:11.5px; color:var(--gray); white-space:nowrap;">${label}</td>
       <td><input type="number" min="0" step="0.5" data-monthplan="${i}" value="${hPlan}" style="width:55px;"></td>
       <td class="cost-col" style="font-size:11px;">${cPlan.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
-      <td style="border-left:2px solid var(--border);"><input type="number" min="0" step="0.5" data-monthreal="${i}" value="${hReal}" style="width:55px;"></td>
-      <td class="cost-col" style="font-size:11px;">${cReal.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
+      <td style="border-left:2px solid var(--border);"><input type="number" min="0" step="0.5" data-monthreal="${i}" value="${hReal}" style="width:55px;${hReal > hPlan ? ' border-color:var(--red); color:var(--red); font-weight:700; background:#FDECEC;' : ''}" title="${hReal > hPlan ? 'Se pasó de lo planeado este mes (+' + Math.round((hReal - hPlan) * 100) / 100 + ' h)' : ''}"></td>
+      <td class="cost-col" style="font-size:11px;${hReal > hPlan ? ' color:var(--red); font-weight:700;' : ''}">${cReal.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
     </tr>`;
   }
   return `<div style="background:#FBFAF7; border-top:2px solid var(--orange); border-bottom:1px solid var(--border); padding:14px 20px; max-height:280px; overflow-y:auto;">
@@ -2740,6 +2798,7 @@ function renderBudget() {
   if (!proj) return;
 
   document.getElementById('budgetIngresos').value = proj.budget._flatIngresoDraft ?? '';
+  document.getElementById('budgetIngresoTotal').value = proj.budget._totalIngresoDraft ?? '';
   document.getElementById('budgetDuracionMeses').value = proj.budget.duracionMeses;
   document.getElementById('budgetStartMonth').value = proj.budget.startMonth;
   document.getElementById('budgetContractValue').value = proj.budget.contractValue ?? '';
@@ -2763,6 +2822,9 @@ function renderBudget() {
     for (let i = 0; i < n; i++) { monthlyPlanTotals[i] += (role.monthlyHours[i] || 0) * rate; monthlyRealTotals[i] += (role.monthlyHoursReal[i] || 0) * rate; }
 
     const isExpanded = expandedRoleIds.has(idx);
+    const mesesPasados = role.monthlyHoursReal.filter((h, i) => (parseFloat(h) || 0) > (parseFloat(role.monthlyHours[i]) || 0)).length;
+    const pasoTotal = totalReal > totalPlan;
+    const redTxt = (cond) => cond ? ' color:var(--red); font-weight:700;' : '';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="text-align:center;"><button class="indent-btn" data-act="toggleRole" style="background:${isExpanded?'var(--orange)':'#fff'}; color:${isExpanded?'#fff':'var(--gray)'};" title="Ver/ocultar desglose mensual">${isExpanded ? '▲' : '▶'}</button></td>
@@ -2771,8 +2833,8 @@ function renderBudget() {
       <td class="col-med cost-col"><input type="number" min="0" data-field="rate" value="${role.rate ?? ''}"></td>
       <td class="col-med" style="font-size:12.5px;">${totalPlan}</td>
       <td class="col-med cost-col" style="font-size:12.5px;">${costoPlan.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
-      <td class="col-med" style="font-size:12.5px;">${totalReal}</td>
-      <td class="col-med cost-col" style="font-size:12.5px;">${costoReal.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
+      <td class="col-med" style="font-size:12.5px;${redTxt(pasoTotal || mesesPasados > 0)}" title="${mesesPasados > 0 ? 'Se pasó de lo planeado en ' + mesesPasados + ' mes(es)' : ''}">${totalReal}${mesesPasados > 0 ? ' ⚠' : ''}</td>
+      <td class="col-med cost-col" style="font-size:12.5px;${redTxt(pasoTotal)}">${costoReal.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
       <td class="row-del">🗑</td>
     `;
     tr.querySelectorAll('input[data-field]').forEach(inp => {
@@ -2989,6 +3051,42 @@ function exportBudgetExcel() {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ingresosRows), 'Ingresos por mes');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(indirectRows), 'Comisión e indirectos');
   XLSX.writeFile(wb, `Presupuesto_${(proj.name || 'proyecto').replace(/[^a-zA-Z0-9]+/g, '_')}.xlsx`);
+}
+function downloadComercialTemplate() {
+  const meses = 6;
+  const anchor = ['Costo proyectado por persona x mes', '% Ocupación', 'Valor por hora'];
+  for (let m = 1; m <= meses; m++) anchor.push('Horas planeadas Mes ' + m);
+  const rows = [
+    ['PLANTILLA PYG COMERCIAL — llena solo las celdas de ejemplo y luego impórtala en la pestaña "Presupuesto Comercial"'],
+    [],
+    ['Ingresos mensuales', 80000000],
+    [],
+    anchor,
+    ['Recurso ejemplo 1 (borra o reemplaza)', 1, 120000, 40, 40, 40, 40, 40, 40],
+    ['Recurso ejemplo 2 (borra o reemplaza)', 0.5, 90000, 20, 20, 20, 20, 20, 20],
+    ['Recurso ejemplo 3 (borra o reemplaza)', 0.25, 75000, 10, 10, 10, 10, 10, 10],
+    [],
+    ['Comisión de venta'],
+    ['% de comisión (en decimal, ej. 0.03 = 3%)', 0.03]
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 42 }, { wch: 14 }, { wch: 16 }, ...new Array(meses).fill({ wch: 20 })];
+  const info = [
+    ['Cómo llenar esta plantilla'],
+    [],
+    ['1. No cambies el texto de la fila "Costo proyectado por persona x mes", ni los encabezados "% Ocupación", "Valor por hora" y "Horas planeadas Mes N": la herramienta los usa para reconocer el formato.'],
+    ['2. Una fila por persona/rol: nombre, % de ocupación (1 = 100%, 0.5 = 50%), valor por hora y las horas planeadas de cada mes.'],
+    ['3. Si el proyecto dura más de 6 meses, agrega más columnas a la derecha con el encabezado "Horas planeadas Mes 7", "Horas planeadas Mes 8", etc.'],
+    ['4. Deja una fila vacía después del último recurso (ahí termina la lista).'],
+    ['5. "Ingresos mensuales" es el valor que se factura por mes; "% de comisión" va en decimal (0.03 = 3%).'],
+    ['6. Guarda el archivo y súbelo con "Importar Excel de comercial".']
+  ];
+  const wsInfo = XLSX.utils.aoa_to_sheet(info);
+  wsInfo['!cols'] = [{ wch: 120 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'PYG Comercial');
+  XLSX.utils.book_append_sheet(wb, wsInfo, 'Instrucciones');
+  XLSX.writeFile(wb, 'Plantilla_PYG_Comercial.xlsx');
 }
 function exportComercialExcel() {
   const proj = currentProject(); if (!proj) return;
@@ -3235,7 +3333,7 @@ function openFollowUpProjectModal(rows) {
   list.innerHTML = distinctProjects.map(p => {
     const guess = distinctProjects.length === 1 || (nameLower && p.toLowerCase().split(/\s+/).some(w => w.length > 3 && nameLower.includes(w)));
     return `<label style="display:flex; align-items:center; gap:8px; padding:8px 4px; border-bottom:1px solid var(--border); cursor:pointer;">
-      <input type="checkbox" value="${escapeHtml(p)}" ${guess ? 'checked' : ''}> <span style="font-size:14px;">${escapeHtml(p)}</span>
+      <input type="checkbox" value="${escapeHtml(p)}"> <span style="font-size:14px;">${escapeHtml(p)}</span>
     </label>`;
   }).join('');
   modal.classList.add('open');
@@ -3696,6 +3794,7 @@ function setViewTab(view) {
   document.getElementById('viewCronograma2').style.display = view === 'cronograma' ? '' : 'none';
   document.getElementById('viewCostos').style.display = view === 'costos' ? '' : 'none';
   document.getElementById('viewComercial').style.display = view === 'comercial' ? '' : 'none';
+  if (view === 'cronograma') setTimeout(autosizeTaskNames, 0);
   document.getElementById('viewAnalytics').style.display = view === 'analytics' ? '' : 'none';
   document.getElementById('viewTabCronograma').classList.toggle('active', view === 'cronograma');
   document.getElementById('viewTabCostos').classList.toggle('active', view === 'costos');
@@ -3909,6 +4008,24 @@ document.getElementById('btnToggleClaudeChat').addEventListener('click', () => {
 document.getElementById('btnCloseClaudeChat').addEventListener('click', () => { document.getElementById('claudeChatPanel').style.display = 'none'; });
 document.getElementById('btnSendClaudeChat').addEventListener('click', sendClaudeChatMessage);
 document.getElementById('claudeChatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendClaudeChatMessage(); });
+function applyTotalIngreso() {
+  const proj = currentProject(); if (!proj) return false;
+  const total = parseFloat(String(proj.budget._totalIngresoDraft || '').replace(/[^0-9.]/g, '')) || 0;
+  const n = parseInt(proj.budget.duracionMeses) || 1;
+  if (total <= 0) return false;
+  const mensual = Math.round(total / n);
+  const arr = new Array(n).fill(mensual);
+  arr[n - 1] = total - mensual * (n - 1); // el último mes absorbe el redondeo para que la suma sea exacta
+  proj.budget.monthlyIngresos = arr;
+  proj.budget._flatIngresoDraft = String(mensual);
+  return true;
+}
+document.getElementById('budgetIngresoTotal').addEventListener('input', (e) => {
+  const proj = currentProject(); if (!proj) return;
+  proj.budget._totalIngresoDraft = e.target.value;
+  if (applyTotalIngreso()) withScrollPreserved(renderBudget);
+  persistAll();
+});
 document.getElementById('budgetIngresos').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget._flatIngresoDraft = e.target.value; persistAll(); });
 document.getElementById('btnApplyFlatIngreso').addEventListener('click', () => {
   const proj = currentProject(); if (!proj) return;
@@ -3917,7 +4034,7 @@ document.getElementById('btnApplyFlatIngreso').addEventListener('click', () => {
   renderBudget(); persistAll();
 });
 document.getElementById('budgetContractValue').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.contractValue = e.target.value; persistAll(); });
-document.getElementById('budgetDuracionMeses').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.duracionMeses = parseInt(e.target.value) || 1; renderBudget(); persistAll(); });
+document.getElementById('budgetDuracionMeses').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.duracionMeses = parseInt(e.target.value) || 1; applyTotalIngreso(); renderBudget(); persistAll(); });
 document.getElementById('budgetStartMonth').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.startMonth = e.target.value; renderBudget(); persistAll(); });
 document.getElementById('btnAddBudgetRole').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.budget.roles.push({ name: '', occupancyPct: '', rate: '', monthlyHours: new Array(proj.budget.duracionMeses).fill(0), monthlyHoursReal: new Array(proj.budget.duracionMeses).fill(0) }); renderBudget(); persistAll(); });
 document.getElementById('btnSyncFromSchedule').addEventListener('click', syncBudgetFromSchedule);
@@ -3946,6 +4063,7 @@ document.getElementById('btnToggleIndirectos').addEventListener('click', () => {
 });
 document.getElementById('btnSyncIngresosFromMilestones').addEventListener('click', syncIngresosFromMilestones);
 document.getElementById('btnImportBudgetExcel').addEventListener('click', () => document.getElementById('fileImportBudgetExcel').click());
+document.getElementById('btnDownloadTemplateComercial').addEventListener('click', downloadComercialTemplate);
 document.getElementById('btnImportComercial').addEventListener('click', () => document.getElementById('fileImportComercial').click());
 document.getElementById('fileImportComercial').addEventListener('change', (e) => { if (e.target.files[0]) { importComercialBudgetFile(e.target.files[0]); e.target.value = ''; } });
 document.getElementById('btnClearComercial').addEventListener('click', clearComercialBudget);
