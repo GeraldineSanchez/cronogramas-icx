@@ -677,6 +677,28 @@ function computeWbsAndTree(tasks) {
 /* ============================================================
    MOTOR CPM v2: jerarquía + 4 tipos de dependencia + hitos
    ============================================================ */
+/* Cuando cambias la fecha/duración de una tarea, las que dependen de ella (sucesoras, directas o en cadena)
+   deben moverse. Las tareas importadas traen la fecha "fijada", y una fecha fijada ignora a sus predecesoras;
+   por eso aquí se les quita la fijación para que el motor las recalcule según sus predecesoras. */
+function cascadeUnpinSuccessors(proj, changedTask) {
+  const { wbsMap } = computeWbsAndTree(proj.tasks);
+  const wbsToId = {}; Object.entries(wbsMap).forEach(([id, w]) => wbsToId[w] = id);
+  const succ = {};
+  proj.tasks.forEach(t => {
+    parsePredText(t.predText).forEach(pr => { const pid = wbsToId[pr.wbs]; if (pid) (succ[pid] = succ[pid] || []).push(t); });
+  });
+  const seen = new Set([changedTask.id]); const queue = [changedTask.id]; let moved = 0;
+  while (queue.length) {
+    const id = queue.shift();
+    (succ[id] || []).forEach(sc => {
+      if (seen.has(sc.id)) return; seen.add(sc.id);
+      if (sc.manualStart || sc.manualStartDateTime || sc.manualEndDateTime) { sc.manualStart = ''; sc.manualStartDateTime = ''; sc.manualEndDateTime = ''; }
+      moved++;
+      queue.push(sc.id);
+    });
+  }
+  return moved;
+}
 function scheduleProjectV2(tasks, projectStart, holidaySet, hoursPerDay) {
   hoursPerDay = hoursPerDay || 8;
   const { wbsMap, hasChildren, flat } = computeWbsAndTree(tasks);
@@ -775,7 +797,8 @@ async function storageSet(key, value) {
    Cualquier persona que abra esta página ya lo tiene, sin importar nada.
    Se puede ajustar/ampliar desde el botón "💵 Tarifario" — lo que edites
    ahí queda guardado en tu navegador y tiene prioridad sobre esta lista base. */
-const DEFAULT_TARIFARIO = [{"name": "Dario Valderrama", "rate": 184000.0}, {"name": "Edisson Zarate", "rate": 183000.0}, {"name": "Jhamir Castiblanco", "rate": 114000.0}, {"name": "Leidy Ospina", "rate": 135000.0}, {"name": "Camilo Andrés Peña", "rate": 82000.0}, {"name": "Laura Garzón", "rate": 78000.0}, {"name": "Jeisson Rojas", "rate": 75000.0}, {"name": "Alejandra Linares", "rate": 63000.0}, {"name": "Daniela Valcarcel", "rate": 61000.0}, {"name": "Laura Arias", "rate": 61000.0}, {"name": "Viviana Cadena", "rate": 69000.0}, {"name": "Catherine Urbina", "rate": 59000.0}, {"name": "Jessica Botello", "rate": 61000.0}, {"name": "Manuel Rubio", "rate": 54000.0}, {"name": "Alex Parada", "rate": 52000.0}, {"name": "Joan Rodríguez", "rate": 53000.0}, {"name": "Felipe Prado", "rate": 50000.0}, {"name": "Katerin Sanchez", "rate": 45000.0}, {"name": "María Paula Umbarila Barajas", "rate": 44000.0}, {"name": "Maria Alejandra Perez", "rate": 47000.0}, {"name": "Julian Castro", "rate": 43000.0}, {"name": "Sergio Mejía", "rate": 43000.0}, {"name": "Erika Aldana", "rate": 43000.0}, {"name": "Juan Camilo Larrota Ruiz", "rate": 43000.0}, {"name": "Santiago Zarate", "rate": 40000.0}, {"name": "Daniel Forero", "rate": 40000.0}, {"name": "Geraldine Sánchez", "rate": 43000.0}, {"name": "Alejandra Suárez", "rate": 42000.0}, {"name": "Alexandra Murcia", "rate": 40000.0}, {"name": "Sebastián Villamil", "rate": 37000.0}, {"name": "Natalia Pérez", "rate": 36000.0}, {"name": "Susana Pérez", "rate": 38000.0}, {"name": "Jhams Castiblanco", "rate": 33000.0}, {"name": "Johnatan Culma", "rate": 19000.0}, {"name": "Cristian Caro", "rate": 25000.0}, {"name": "Michael Varón", "rate": 25000.0}, {"name": "Miller Bautista", "rate": 52000.0}, {"name": "Alexa Britto", "rate": 39000.0}, {"name": "Johana Espitia", "rate": 30000.0}, {"name": "Camila Cano", "rate": 51000.0}, {"name": "Andres Salgado", "rate": 40000.0}, {"name": "Jennifer Riaño", "rate": 34000.0}];
+const TARIFARIO_VERSION = "2026-10-22";
+const DEFAULT_TARIFARIO = [{"name": "Dario Valderrama", "rate": 184000.0}, {"name": "Edisson Zarate", "rate": 183000.0, "aliases": ["Edisson Zarate Caro"]}, {"name": "Jhamir Castiblanco", "rate": 128000.0, "aliases": ["Heyner Jhamir Castiblanco Castiblanco"]}, {"name": "Leidy Ospina", "rate": 135000.0, "aliases": ["Leidy Diana Ospina Rodriguez"]}, {"name": "Camilo Andrés Peña", "rate": 82000.0}, {"name": "Laura Garzón", "rate": 78000.0}, {"name": "Jeisson Rojas", "rate": 75000.0}, {"name": "Alejandra Linares", "rate": 63000.0}, {"name": "Daniela Valcarcel", "rate": 61000.0}, {"name": "Laura Arias", "rate": 61000.0}, {"name": "Viviana Cadena", "rate": 69000.0}, {"name": "Catherine Urbina", "rate": 59000.0}, {"name": "Jessica Botello", "rate": 61000.0, "aliases": ["Jessica Julieth Botello Molina"]}, {"name": "Manuel Rubio", "rate": 54000.0}, {"name": "Alex Parada", "rate": 52000.0}, {"name": "Joan Rodríguez", "rate": 53000.0, "aliases": ["Joan Esteban Rodriguez Lopez"]}, {"name": "Felipe Prado", "rate": 50000.0, "aliases": ["Juan Felipe Prado"]}, {"name": "Katerin Sanchez", "rate": 45000.0}, {"name": "María Paula Umbarila Barajas", "rate": 44000.0}, {"name": "Maria Alejandra Perez", "rate": 47000.0}, {"name": "Julian Castro", "rate": 43000.0}, {"name": "Sergio Mejía", "rate": 43000.0}, {"name": "Erika Aldana", "rate": 43000.0, "aliases": ["Erika Tatiana Aldana Montaña"]}, {"name": "Juan Camilo Larrota Ruiz", "rate": 43000.0, "aliases": ["Juan Camilo Larrota"]}, {"name": "Santiago Zarate", "rate": 40000.0}, {"name": "Daniel Forero", "rate": 42000.0}, {"name": "Geraldine Sánchez", "rate": 43000.0}, {"name": "Alejandra Suárez", "rate": 42000.0, "aliases": ["Maria Alejandra Suarez"]}, {"name": "Alexandra Murcia", "rate": 40000.0, "aliases": ["Alexandra Murcuia"]}, {"name": "Sebastián Villamil", "rate": 36000.0}, {"name": "Natalia Pérez", "rate": 36000.0}, {"name": "Susana Pérez", "rate": 37000.0}, {"name": "Jhams Castiblanco", "rate": 33000.0}, {"name": "Johnatan Culma", "rate": 19000.0, "aliases": ["Jhonathan Culma"]}, {"name": "Cristian Caro", "rate": 23000.0}, {"name": "Michael Varón", "rate": 25000.0}, {"name": "Miller Bautista", "rate": 52000.0, "aliases": ["Miller Buatista"]}, {"name": "Alexa Britto", "rate": 39000.0, "aliases": ["Amervis Alexandra Brito Martinez"]}, {"name": "Johana Espitia", "rate": 30000.0}, {"name": "Camila Cano", "rate": 51000.0}, {"name": "Andres Salgado", "rate": 40000.0}, {"name": "Jennifer Riaño", "rate": 34000.0}, {"name": "Viviana Reyes", "rate": 25000.0}, {"name": "Cesar Eduardo Jimenez Henao", "rate": 19000.0}, {"name": "Jennifer Ayala", "rate": 34000.0}, {"name": "Jesus Alexander Brito Martinez", "rate": 19000.0}];
 let state = { projects: [], currentId: null, tarifario: [] };
 const uid = () => 'p_' + Math.random().toString(36).slice(2, 9);
 const taskUid = () => 't_' + Math.random().toString(36).slice(2, 9);
@@ -927,10 +950,35 @@ async function openStorageDiagnosticModal() {
   }
   document.getElementById('storageDiagnosticModal').classList.add('open');
 }
+const normNameKey = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+function tarifarioEntryMatches(t, key) {
+  if (normNameKey(t.name) === key) return true;
+  return Array.isArray(t.aliases) && t.aliases.some(a => normNameKey(a) === key);
+}
+async function mergeDefaultTarifarioIntoStored() {
+  // Cuando se publica una tarifa nueva en la lista base (cambia TARIFARIO_VERSION), se aplica
+  // UNA vez sobre lo que ya tenías guardado en este navegador: actualiza la tarifa de quienes ya
+  // están y agrega a las personas nuevas. No borra a nadie ni toca a quienes no vienen en la lista base.
+  DEFAULT_TARIFARIO.forEach(d => {
+    const keys = [normNameKey(d.name), ...(d.aliases || []).map(normNameKey)];
+    const e = state.tarifario.find(t => keys.some(k => tarifarioEntryMatches(t, k)));
+    if (e) {
+      e.rate = d.rate;
+      if (d.aliases && d.aliases.length) e.aliases = Array.from(new Set([...(e.aliases || []), ...d.aliases]));
+    } else state.tarifario.push({ ...d });
+  });
+  await storageSet('cronogramas2:tarifario', JSON.stringify(state.tarifario));
+  await storageSet('cronogramas2:tarifarioVersion', TARIFARIO_VERSION);
+}
 async function loadTarifario() {
   try {
     const r = await storageGet('cronogramas2:tarifario');
-    if (r) { state.tarifario = JSON.parse(r.value) || []; return; }
+    if (r) {
+      state.tarifario = JSON.parse(r.value) || [];
+      let ver = null; try { const v = await storageGet('cronogramas2:tarifarioVersion'); if (v) ver = v.value; } catch (e) {}
+      if (ver !== TARIFARIO_VERSION) { try { await mergeDefaultTarifarioIntoStored(); } catch (e) { console.error('No se pudo actualizar el tarifario:', e); } }
+      return;
+    }
   } catch (e) { console.error(e); }
   // Nadie ha guardado ajustes propios todavía en este navegador: partir del
   // tarifario base incluido en la herramienta (nadie tiene que importar nada).
@@ -938,8 +986,8 @@ async function loadTarifario() {
 }
 function findTarifarioRate(name) {
   if (!name) return null;
-  const key = name.trim().toLowerCase();
-  const entry = state.tarifario.find(t => t.name.trim().toLowerCase() === key);
+  const key = normNameKey(name);
+  const entry = state.tarifario.find(t => tarifarioEntryMatches(t, key));
   return entry ? parseFloat(entry.rate) || null : null;
 }
 function findAnyRateHour(proj, name) {
@@ -1414,9 +1462,9 @@ function wireTaskEditPanel(editTr, proj, t) {
     const field = inp.dataset.efield;
     const evName = inp.tagName === 'SELECT' ? 'change' : 'input';
     inp.addEventListener(evName, () => {
-      if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; t.manualEndDateTime = ''; }
-      else if (field === 'manualStart') { t.manualStart = inp.value; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
-      else if (field === 'manualEnd') { t.manualEndDateTime = inp.value ? inp.value + 'T16:59:59' : ''; }
+      if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; t.manualEndDateTime = ''; cascadeUnpinSuccessors(proj, t); }
+      else if (field === 'manualStart') { t.manualStart = inp.value; t.manualStartDateTime = ''; t.manualEndDateTime = ''; cascadeUnpinSuccessors(proj, t); }
+      else if (field === 'manualEnd') { t.manualEndDateTime = inp.value ? inp.value + 'T16:59:59' : ''; cascadeUnpinSuccessors(proj, t); }
       else if (field === 'predText') { t.predText = inp.value; t.manualStart = ''; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
       else t[field] = inp.value;
       if (evName === 'change') { recalc(); withScrollPreserved(renderAll_inner); persistAll(); } else { scheduleRecalcRender(); }
@@ -1662,6 +1710,7 @@ function renderTaskTable() {
       const field = inp.dataset.field;
       const evName = (inp.tagName === 'SELECT' || inp.type === 'checkbox') ? 'change' : 'input';
       inp.addEventListener(evName, () => {
+        let _cascadeMoved = 0;
         if (field === 'resource' && inp.value === '__new__') {
           const name = prompt('Nombre del nuevo recurso:');
           if (name && name.trim()) {
@@ -1684,11 +1733,12 @@ function renderTaskTable() {
             proj.resources.push({ name: inp.value, rate: tarRate ? Math.round(tarRate * (proj.hoursPerDay || 8)) : 0 });
           }
           t.resource = inp.value;
-        } else if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; t.manualEndDateTime = ''; }
-        else if (field === 'manualStart') { t.manualStart = inp.value; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
-        else if (field === 'manualEnd') { t.manualEndDateTime = inp.value ? inp.value + 'T16:59:59' : ''; }
+        } else if (field === 'duration') { t.duration = inp.value; t.isMilestone = (parseFloat(inp.value) || 0) === 0; t.manualEndDateTime = ''; _cascadeMoved = cascadeUnpinSuccessors(proj, t); }
+        else if (field === 'manualStart') { t.manualStart = inp.value; t.manualStartDateTime = ''; t.manualEndDateTime = ''; _cascadeMoved = cascadeUnpinSuccessors(proj, t); }
+        else if (field === 'manualEnd') { t.manualEndDateTime = inp.value ? inp.value + 'T16:59:59' : ''; _cascadeMoved = cascadeUnpinSuccessors(proj, t); }
         else if (field === 'predText') { t.predText = inp.value; t.manualStart = ''; t.manualStartDateTime = ''; t.manualEndDateTime = ''; }
         else t[field] = inp.type === 'checkbox' ? inp.checked : inp.value;
+        if (_cascadeMoved > 0) saveIndicator('Se recalcularon ' + _cascadeMoved + ' tarea(s) que dependen de esta');
         if (evName === 'change') { recalc(); withScrollPreserved(renderAll_inner); persistAll(); } else { scheduleRecalcRender(); }
       });
     });
