@@ -3051,16 +3051,10 @@ function renderBudget() {
   const comisionBaseValor = proj.budget.commissionBase === 'contrato' ? (parseFloat(proj.budget.contractValue) || 0) : ingresosTotales;
   const comisionValor = comisionBaseValor * (proj.budget.commissionPct / 100);
   const otrosCostos = totalIndirectos + comisionValor;
-  const today = new Date();
-  const startIdx = monthKeyToIdx(proj.budget.startMonth || (today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0')));
-  const todayIdx = today.getFullYear() * 12 + today.getMonth();
-  const mesesEjecutados = Math.max(0, Math.min(n, todayIdx - startIdx + 1));
-  const ingresoEjecutado = proj.budget.monthlyIngresos.slice(0, mesesEjecutados).reduce((s, v) => s + (parseFloat(v) || 0), 0);
-
-  const utilidadPlan = ingresoEjecutado - grandPlanCost - otrosCostos;
-  const utilidadReal = ingresoEjecutado - grandRealCost - otrosCostos;
-  const rentPlan = ingresoEjecutado > 0 ? Math.round((utilidadPlan / ingresoEjecutado) * 1000) / 10 : 0;
-  const rentReal = ingresoEjecutado > 0 ? Math.round((utilidadReal / ingresoEjecutado) * 1000) / 10 : 0;
+  const utilidadPlan = ingresosTotales - grandPlanCost - otrosCostos;
+  const utilidadReal = ingresosTotales - grandRealCost - otrosCostos;
+  const rentPlan = ingresosTotales > 0 ? Math.round((utilidadPlan / ingresosTotales) * 1000) / 10 : 0;
+  const rentReal = ingresosTotales > 0 ? Math.round((utilidadReal / ingresosTotales) * 1000) / 10 : 0;
   const ejecucion = grandPlanHours > 0 ? Math.round((grandRealHours / grandPlanHours) * 1000) / 10 : 0;
   const today = new Date();
   const startIdx = monthKeyToIdx(proj.budget.startMonth || (today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0')));
