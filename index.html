@@ -329,12 +329,14 @@ Fase 2: Migración
       <div id="indirectosPanel" style="display:none; margin-top:10px; background:var(--gray-light); border-radius:8px; padding:12px;"></div>
     </div>
     <div class="toolbar" style="margin:6px 0 10px 0;">
+      <div class="field"><label>Ingreso mensual (para aplicar parejo)</label><input type="text" id="budgetIngresos" placeholder="Ej. 80000000" style="width:160px;"></div>
+      <button class="btn btn-ghost btn-xs" id="btnApplyFlatIngreso" style="padding:8px 12px;">Aplicar a todos los meses</button>
       <div class="field"><label>Duración (meses)</label><input type="number" id="budgetDuracionMeses" min="1" max="60" style="width:90px;"></div>
       <div class="field"><label>Mes inicial</label><input type="month" id="budgetStartMonth"></div>
     </div>
     <div class="toolbar" style="margin:0 0 14px 0;">
       <div class="field"><label>Valor total del contrato (para hitos de pago)</label><input type="text" id="budgetContractValue" placeholder="Ej. 400000000" style="width:180px;"></div>
-      <button class="btn btn-accent" id="btnSyncIngresosFromMilestones">🔗 Confirmar % de hitos de pago</button>
+      <button class="btn btn-accent" id="btnSyncIngresosFromMilestones">🔗 Sincronizar ingresos desde hitos del cronograma</button>
       <button class="btn btn-accent" id="btnSyncFromSchedule">🔗 Sincronizar horas planeadas desde el cronograma</button>
       <button class="btn btn-primary" id="btnSaveBudgetExplicit">💾 Guardar presupuesto</button>
       <button class="btn btn-ghost" id="btnSyncRealFromSchedule">🔗 Sincronizar horas reales desde el avance</button>
@@ -344,8 +346,9 @@ Fase 2: Migración
       <button class="btn btn-primary" id="btnExportBudgetExcel">📊 Exportar a Excel</button>
       <input type="file" id="fileImportBudgetExcel" accept=".xlsx,.xls" style="display:none;">
     </div>
+    <div id="hitosPagoPanel" style="display:none; margin:0 0 14px 0; background:var(--gray-light); border-radius:8px; padding:12px; overflow-x:auto;"></div>
     <p class="hint" style="margin-top:0;">
-      Los <b>ingresos se calculan solos</b> desde los hitos de pago del cronograma (tareas con "hito" o "pago" en el nombre, ej. "Migración Ventas (hito de pago 25%)"): usan la fecha en que terminan para ubicar el ingreso en el mes correcto — solo necesitas el valor total del contrato. "Confirmar % de hitos de pago" te deja ajustar el porcentaje de cada hito.
+      "Sincronizar ingresos" busca tareas cuyo nombre tenga un hito de pago (ej. "Migración Ventas (hito de pago 25%)") y usa la fecha en que terminan según el cronograma para ubicar ese ingreso en el mes correcto — solo necesitas darle el valor total del contrato.
       "Sincronizar horas planeadas" trae las horas asignadas de cada recurso directamente de las tareas del cronograma. "Sincronizar horas reales" las calcula como horas planeadas × % de avance real de cada tarea.
       Haz clic en ▶ junto a cada recurso para ver/editar su desglose mes a mes sin saturar la tabla.
     </p>
@@ -869,7 +872,7 @@ function normalizeProject(p) {
   p.budget.duracionMeses = parseInt(p.budget.duracionMeses) > 0 ? parseInt(p.budget.duracionMeses) : 6;
   p.budget.startMonth = p.budget.startMonth || (p.start || '').slice(0, 7);
   p.budget.contractValue = p.budget.contractValue || '';
-  p.budget.billingMode = 'milestones';
+  p.budget.billingMode = p.budget.billingMode || 'flat';
   // Migrar de "ingresos" (un solo numero fijo) a "monthlyIngresos" (arreglo por mes)
   if (!p.budget.monthlyIngresos) {
     const flat = parseFloat(p.budget.ingresos) || 0;
@@ -1926,7 +1929,7 @@ function renderResources() {
     tr.innerHTML = `
       <td><input type="text" data-field="name" value="${escapeHtml(res.name)}" placeholder="Ej. Jessica Botello" style="min-width:170px;"></td>
       <td class="col-med cost-col"><input type="number" min="0" data-field="rate" value="${res.rate ?? 0}" placeholder="Ej. 400000"></td>
-      <td class="col-med" style="font-size:12.5px;">${r1(daysAssigned)}</td>
+      <td class="col-med" style="font-size:12.5px;">${daysAssigned}</td>
       <td class="col-med cost-col" style="font-size:12.5px;">${cost.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</td>
       <td class="col-med"><span class="badge ${overDays ? 'badge-critical' : 'badge-ok'}">${overDays ? 'Sobrecargado' : 'Normal'}</span></td>
       <td class="row-del">🗑</td>
@@ -2869,7 +2872,7 @@ function syncRealHoursFromSchedule() {
     for (let m = 0; m < n; m++) {
       const d = new Date(fy_fm[0], fy_fm[1] - 1 + m, 1);
       const mk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-      role.monthlyHoursReal[m] = r1(byResourceMonth[name][mk]);
+      role.monthlyHoursReal[m] = Math.round((byResourceMonth[name][mk] || 0) * 100) / 100;
     }
   });
   renderBudget(); persistAll(); saveIndicator('Horas reales sincronizadas desde el avance');
@@ -2909,7 +2912,7 @@ function syncBudgetFromSchedule() {
     for (let m = 0; m < totalMonths; m++) {
       const d = new Date(fy, fm - 1 + m, 1);
       const mk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-      role.monthlyHours[m] = r1(byResourceMonth[name][mk]);
+      role.monthlyHours[m] = Math.round((byResourceMonth[name][mk] || 0) * 100) / 100;
     }
     role._syncedFromSchedule = true;
   });
@@ -2919,7 +2922,6 @@ function syncBudgetFromSchedule() {
 /* ============================================================
    PRESUPUESTO (por rol: horas totales x valor/hora)
    ============================================================ */
-const r1 = v => Math.round((parseFloat(v) || 0) * 10) / 10;
 function monthLabel(startMonth, i) {
   const parts = (startMonth || '').split('-').map(Number);
   const y = parts[0], m = parts[1];
@@ -2938,9 +2940,9 @@ function buildRoleMonthlyPanel(proj, role, n) {
     const cPlan = hPlan * rate, cReal = hReal * rate;
     rows += `<tr>
       <td style="font-size:11.5px; color:var(--gray); white-space:nowrap;">${label}</td>
-      <td><input type="number" min="0" step="0.5" data-monthplan="${i}" value="${r1(hPlan)}" style="width:55px;"></td>
+      <td><input type="number" min="0" step="0.5" data-monthplan="${i}" value="${hPlan}" style="width:55px;"></td>
       <td class="cost-col" style="font-size:11px;">${cPlan.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
-      <td style="border-left:2px solid var(--border);"><input type="number" min="0" step="0.5" data-monthreal="${i}" value="${r1(hReal)}" style="width:55px;${hReal > hPlan ? ' border-color:var(--red); color:var(--red); font-weight:700; background:#FDECEC;' : ''}" title="${hReal > hPlan ? 'Se pasó de lo planeado este mes (+' + r1(hReal - hPlan) + ' h)' : ''}"></td>
+      <td style="border-left:2px solid var(--border);"><input type="number" min="0" step="0.5" data-monthreal="${i}" value="${hReal}" style="width:55px;${hReal > hPlan ? ' border-color:var(--red); color:var(--red); font-weight:700; background:#FDECEC;' : ''}" title="${hReal > hPlan ? 'Se pasó de lo planeado este mes (+' + Math.round((hReal - hPlan) * 100) / 100 + ' h)' : ''}"></td>
       <td class="cost-col" style="font-size:11px;${hReal > hPlan ? ' color:var(--red); font-weight:700;' : ''}">${cReal.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
     </tr>`;
   }
@@ -2963,6 +2965,7 @@ function renderBudget() {
   headerRow.innerHTML = ''; tbody.innerHTML = ''; tfoot.innerHTML = ''; summary.innerHTML = '';
   if (!proj) return;
 
+  document.getElementById('budgetIngresos').value = proj.budget._flatIngresoDraft ?? '';
   document.getElementById('budgetDuracionMeses').value = proj.budget.duracionMeses;
   document.getElementById('budgetStartMonth').value = proj.budget.startMonth;
   document.getElementById('budgetContractValue').value = proj.budget.contractValue ?? '';
@@ -2995,15 +2998,15 @@ function renderBudget() {
       <td><input type="text" data-field="name" value="${escapeHtml(role.name || '')}" placeholder="Ej. Jessica Botello" style="min-width:${role._syncedFromSchedule ? '130px' : '150px'};">${role._syncedFromSchedule ? ' <span title="Sincronizado con el cronograma">🔗</span>' : ''}</td>
       <td class="col-narrow"><input type="number" min="0" max="100" data-field="occupancyPct" value="${role.occupancyPct ?? ''}" placeholder="%"></td>
       <td class="col-med cost-col"><input type="number" min="0" data-field="rate" value="${role.rate ?? ''}"></td>
-      <td class="col-med" style="font-size:12.5px;">${r1(totalPlan)}</td>
+      <td class="col-med" style="font-size:12.5px;">${totalPlan}</td>
       <td class="col-med cost-col" style="font-size:12.5px;">${costoPlan.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
-      <td class="col-med" style="font-size:12.5px;${redTxt(pasoTotal || mesesPasados > 0)}" title="${mesesPasados > 0 ? 'Se pasó de lo planeado en ' + mesesPasados + ' mes(es)' : ''}">${r1(totalReal)}${mesesPasados > 0 ? ' ⚠' : ''}</td>
+      <td class="col-med" style="font-size:12.5px;${redTxt(pasoTotal || mesesPasados > 0)}" title="${mesesPasados > 0 ? 'Se pasó de lo planeado en ' + mesesPasados + ' mes(es)' : ''}">${totalReal}${mesesPasados > 0 ? ' ⚠' : ''}</td>
       <td class="col-med cost-col" style="font-size:12.5px;${redTxt(pasoTotal)}">${costoReal.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td>
       <td class="row-del">🗑</td>
     `;
     tr.querySelectorAll('input[data-field]').forEach(inp => {
       const field = inp.dataset.field;
-      inp.addEventListener('change', () => {
+      inp.addEventListener('input', () => {
         role[field] = inp.value;
         if (field === 'name' && (!role.rate || parseFloat(role.rate) === 0)) {
           const tarRate = findAnyRateHour(proj, inp.value);
@@ -3029,10 +3032,10 @@ function renderBudget() {
       panelTd.colSpan = 9; panelTd.style.padding = '0';
       panelTd.innerHTML = buildRoleMonthlyPanel(proj, role, n);
       panelTd.querySelectorAll('input[data-monthplan]').forEach(inp => {
-        inp.addEventListener('change', () => { role.monthlyHours[parseInt(inp.dataset.monthplan)] = parseFloat(inp.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
+        inp.addEventListener('input', () => { role.monthlyHours[parseInt(inp.dataset.monthplan)] = parseFloat(inp.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
       });
       panelTd.querySelectorAll('input[data-monthreal]').forEach(inp => {
-        inp.addEventListener('change', () => { role.monthlyHoursReal[parseInt(inp.dataset.monthreal)] = parseFloat(inp.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
+        inp.addEventListener('input', () => { role.monthlyHoursReal[parseInt(inp.dataset.monthreal)] = parseFloat(inp.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
       });
       panelTr.appendChild(panelTd);
       tbody.appendChild(panelTr);
@@ -3043,7 +3046,7 @@ function renderBudget() {
   proj.budget.monthlyIngresos.length = n;
   const totalIngresosPlan = proj.budget.monthlyIngresos.reduce((s,v)=>s+(parseFloat(v)||0),0);
   let footerHtml = '';
-  footerHtml += `<tr class="budget-total-row"><td colspan="4">Total Costos Directos</td><td style="font-size:11.5px;">${r1(grandPlanHours)}h</td><td class="cost-col" style="font-size:11.5px;">${grandPlanCost.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td><td style="font-size:11.5px;">${r1(grandRealHours)}h</td><td class="cost-col" style="font-size:11.5px;">${grandRealCost.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td><td></td></tr>`;
+  footerHtml += `<tr class="budget-total-row"><td colspan="4">Total Costos Directos</td><td style="font-size:11.5px;">${grandPlanHours}h</td><td class="cost-col" style="font-size:11.5px;">${grandPlanCost.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td><td style="font-size:11.5px;">${grandRealHours}h</td><td class="cost-col" style="font-size:11.5px;">${grandRealCost.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0})}</td><td></td></tr>`;
   tfoot.innerHTML = footerHtml;
 
   const ingresosTotales = totalIngresosPlan;
@@ -3052,37 +3055,42 @@ function renderBudget() {
   const comisionValor = comisionBaseValor * (proj.budget.commissionPct / 100);
   const otrosCostos = totalIndirectos + comisionValor;
   const utilidadPlan = ingresosTotales - grandPlanCost - otrosCostos;
-  const utilidadReal = ingresosTotales - grandRealCost - otrosCostos;
+  const realFin = computeRealFinancials(proj, grandRealCost);
+  const utilidadReal = realFin.utilidad;
   const rentPlan = ingresosTotales > 0 ? Math.round((utilidadPlan / ingresosTotales) * 1000) / 10 : 0;
-  const rentReal = ingresosTotales > 0 ? Math.round((utilidadReal / ingresosTotales) * 1000) / 10 : 0;
+  const rentReal = realFin.rent;
   const ejecucion = grandPlanHours > 0 ? Math.round((grandRealHours / grandPlanHours) * 1000) / 10 : 0;
   const today = new Date();
   const startIdx = monthKeyToIdx(proj.budget.startMonth || (today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0')));
   const todayIdx = today.getFullYear() * 12 + today.getMonth();
   const mesesEjecutados = Math.max(0, Math.min(n, todayIdx - startIdx + 1));
-  const ingresoEjecutado = proj.budget.monthlyIngresos.slice(0, mesesEjecutados).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  const ingresoEjecutado = realFin.ingresoEjecutado;
   summary.innerHTML = `
     <div class="cost-box cost-col"><div class="k">Ingresos totales (${n} meses)</div><div class="v">${ingresosTotales.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
-    <div class="cost-box cost-col" title="Suma de los ingresos de los meses que ya transcurrieron (${mesesEjecutados} de ${n})"><div class="k">Ingreso ejecutado a hoy</div><div class="v">${ingresoEjecutado.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
-    <div class="cost-box cost-col"><div class="k">Costo total proyectado (${r1(grandPlanHours)}h)</div><div class="v">${grandPlanCost.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
+    <div class="cost-box cost-col" title="${realFin.detail}"><div class="k">Ingreso ejecutado a hoy</div><div class="v">${ingresoEjecutado.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
+    <div class="cost-box cost-col"><div class="k">Costo total proyectado (${grandPlanHours}h)</div><div class="v">${grandPlanCost.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
     <div class="cost-box cost-col" title="${proj.budget.commissionPct || 0}% sobre ${proj.budget.commissionBase === 'contrato' ? 'el valor del contrato' : 'los ingresos totales'}"><div class="k">Comisión de venta (${proj.budget.commissionPct || 0}%)</div><div class="v">${comisionValor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
     <div class="cost-box cost-col" title="${proj.budget.indirectCosts.map(ic=>ic.name||'(sin nombre)').join(', ') || 'Ninguno agregado todavía'}"><div class="k">Costos indirectos (pólizas, etc.)</div><div class="v">${totalIndirectos.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
     <div class="cost-box cost-col"><div class="k">Rentabilidad proyectada</div><div class="v" style="color:${rentPlan>=0?'var(--green)':'var(--red)'};">${rentPlan}%</div></div>
-    <div class="cost-box cost-col"><div class="k">Costo real a hoy (${r1(grandRealHours)}h)</div><div class="v">${grandRealCost.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
-    <div class="cost-box cost-col"><div class="k">Utilidad real a hoy</div><div class="v" style="color:${utilidadReal>=0?'var(--green)':'var(--red)'};">${utilidadReal.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
-    <div class="cost-box cost-col"><div class="k">Rentabilidad real a hoy</div><div class="v" style="color:${rentReal>=0?'var(--green)':'var(--red)'};">${rentReal}%</div></div>
+    <div class="cost-box cost-col"><div class="k">Costo real a hoy (${grandRealHours}h)</div><div class="v">${grandRealCost.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
+    <div class="cost-box cost-col"><div class="k" title="Ingreso ejecutado − costo real − comisión − indirectos proporcionales">Utilidad real a hoy</div><div class="v" style="color:${utilidadReal>=0?'var(--green)':'var(--red)'};">${utilidadReal.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div></div>
+    <div class="cost-box cost-col"><div class="k" title="Se calcula sobre el ingreso EJECUTADO, no sobre el total del contrato">Rentabilidad real (sobre ingreso ejecutado)</div><div class="v" style="color:${rentReal === null ? 'var(--gray)' : (rentReal>=0?'var(--green)':'var(--red)')};">${rentReal === null ? '— <span style="font-size:12px;">sin ingresos ejecutados</span>' : rentReal + '%'}</div></div>
     <div class="cost-box"><div class="k">Ejecución de horas</div><div class="v" style="color:${ejecucion<=100?'var(--navy)':'var(--red)'};">${ejecucion}%</div></div>
   `;
 
   const ingresosPanel = document.getElementById('ingresosMesPanel');
-  let ingresosRows = '<div style="font-size:11.5px; color:var(--gray); margin-bottom:8px;">Calculado automáticamente desde los hitos de pago del cronograma (valor del contrato × % de cada hito). Para cambiarlo, ajusta el contrato, los hitos o sus %.</div><table style="width:auto; min-width:220px;"><tbody id="ingresosMesTbody">';
+  let ingresosRows = '<table style="width:auto; min-width:220px;"><tbody id="ingresosMesTbody">';
   for (let i = 0; i < n; i++) {
-    ingresosRows += `<tr><td style="font-size:12px; color:var(--gray); padding:4px 8px 4px 0;">${monthLabel(proj.budget.startMonth, i)}</td><td><input type="text" class="cost-col" readonly value="${(proj.budget.monthlyIngresos[i] || 0).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}" style="width:150px; background:#fff;"></td></tr>`;
+    ingresosRows += `<tr><td style="font-size:12px; color:var(--gray); padding:4px 8px 4px 0;">${monthLabel(proj.budget.startMonth, i)}</td><td><input type="number" min="0" class="cost-col" data-ingresomes="${i}" value="${proj.budget.monthlyIngresos[i] || 0}" style="width:120px;"></td></tr>`;
   }
   ingresosRows += '</tbody></table>';
   ingresosPanel.innerHTML = ingresosRows;
+  ingresosPanel.querySelectorAll('input[data-ingresomes]').forEach(inp => {
+    inp.addEventListener('input', () => { proj.budget.monthlyIngresos[parseInt(inp.dataset.ingresomes)] = parseFloat(inp.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
+  });
 
   renderIndirectCostsPanel(proj, n);
+  renderHitosPagoPanel(proj);
 }
 function renderIndirectCostsPanel(proj, n) {
   const panel = document.getElementById('indirectosPanel');
@@ -3127,13 +3135,13 @@ function renderIndirectCostsPanel(proj, n) {
   html += `<button class="btn btn-ghost btn-xs" id="btnAddIndirect" style="margin-top:6px;">+ Agregar costo indirecto</button>`;
   panel.innerHTML = html;
 
-  document.getElementById('inputCommissionPct').addEventListener('change', (e) => { proj.budget.commissionPct = parseFloat(e.target.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
+  document.getElementById('inputCommissionPct').addEventListener('input', (e) => { proj.budget.commissionPct = parseFloat(e.target.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
   document.getElementById('selCommissionBase').addEventListener('change', (e) => { proj.budget.commissionBase = e.target.value; renderBudget(); persistAll(); });
   panel.querySelectorAll('[data-icfield="name"]').forEach(inp => {
-    inp.addEventListener('change', () => { proj.budget.indirectCosts[parseInt(inp.dataset.icidx)].name = inp.value; withScrollPreserved(renderBudget); persistAll(); });
+    inp.addEventListener('input', () => { proj.budget.indirectCosts[parseInt(inp.dataset.icidx)].name = inp.value; withScrollPreserved(renderBudget); persistAll(); });
   });
   panel.querySelectorAll('[data-icmonth]').forEach(inp => {
-    inp.addEventListener('change', () => { proj.budget.indirectCosts[parseInt(inp.dataset.icidx)].monthlyValues[parseInt(inp.dataset.m)] = parseFloat(inp.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
+    inp.addEventListener('input', () => { proj.budget.indirectCosts[parseInt(inp.dataset.icidx)].monthlyValues[parseInt(inp.dataset.m)] = parseFloat(inp.value) || 0; withScrollPreserved(renderBudget); persistAll(); });
   });
   panel.querySelectorAll('[data-act="toggleIC"]').forEach(btn => {
     btn.addEventListener('click', () => { const i = parseInt(btn.dataset.icidx); if (expandedICIds.has(i)) expandedICIds.delete(i); else expandedICIds.add(i); renderBudget(); });
@@ -3171,10 +3179,10 @@ function exportBudgetExcel() {
     const totalReal = (role.monthlyHoursReal || []).reduce((s, h) => s + (parseFloat(h) || 0), 0);
     const costoPlan = totalPlan * rate, costoReal = totalReal * rate;
     grandPlanCost += costoPlan; grandRealCost += costoReal;
-    const row = [role.name || '', role.occupancyPct || '', rate, r1(totalPlan), costoPlan, r1(totalReal), costoReal];
+    const row = [role.name || '', role.occupancyPct || '', rate, totalPlan, costoPlan, totalReal, costoReal];
     for (let i = 0; i < n; i++) {
       const hPlan = (role.monthlyHours || [])[i] || 0, hReal = (role.monthlyHoursReal || [])[i] || 0;
-      row.push(r1(hPlan), hPlan * rate, r1(hReal), hReal * rate);
+      row.push(hPlan, hPlan * rate, hReal, hReal * rate);
     }
     rows.push(row);
   });
@@ -3183,11 +3191,8 @@ function exportBudgetExcel() {
   const totalIndirectos = proj.budget.indirectCosts.reduce((s, ic) => s + ic.monthlyValues.reduce((s2, v) => s2 + (parseFloat(v) || 0), 0), 0);
   const comisionBaseValor = proj.budget.commissionBase === 'contrato' ? (parseFloat(proj.budget.contractValue) || 0) : ingresosTotales;
   const comisionValor = comisionBaseValor * (proj.budget.commissionPct / 100);
-  const today = new Date();
-  const startIdxE = monthKeyToIdx(proj.budget.startMonth || '');
-  const todayIdxE = today.getFullYear() * 12 + today.getMonth();
-  const mesesEjecutadosE = Math.max(0, Math.min(n, todayIdxE - startIdxE + 1));
-  const ingresoEjecutado = proj.budget.monthlyIngresos.slice(0, mesesEjecutadosE).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  const realFinE = computeRealFinancials(proj, grandRealCost);
+  const ingresoEjecutado = realFinE.ingresoEjecutado;
 
   rows.push(['Ingresos totales', ingresosTotales]);
   rows.push(['Ingreso ejecutado a hoy', ingresoEjecutado]);
@@ -3195,8 +3200,8 @@ function exportBudgetExcel() {
   rows.push(['Costo total real', grandRealCost]);
   rows.push([`Comisión de venta (${proj.budget.commissionPct || 0}% sobre ${proj.budget.commissionBase === 'contrato' ? 'contrato' : 'ingresos'})`, comisionValor]);
   rows.push(['Costos indirectos (pólizas, licencias, etc.)', totalIndirectos]);
-  rows.push(['Utilidad (real)', ingresosTotales - grandRealCost - comisionValor - totalIndirectos]);
-  rows.push(['Rentabilidad (real) %', ingresosTotales > 0 ? Math.round(((ingresosTotales - grandRealCost - comisionValor - totalIndirectos) / ingresosTotales) * 1000) / 10 : 0]);
+  rows.push(['Utilidad real (sobre ingreso ejecutado)', realFinE.utilidad]);
+  rows.push(['Rentabilidad real % (sobre ingreso ejecutado)', realFinE.rent === null ? 'Sin ingresos ejecutados' : realFinE.rent]);
 
   const ingresosRows = [['Mes', 'Ingreso']];
   for (let i = 0; i < n; i++) ingresosRows.push([monthLabel(proj.budget.startMonth, i), proj.budget.monthlyIngresos[i] || 0]);
@@ -3571,7 +3576,7 @@ function confirmFollowUpImport() {
     role.monthlyHoursReal = new Array(n).fill(0);
     for (let m = 0; m < n; m++) {
       const mk = idxToMonthKey(finalStartIdx + m);
-      role.monthlyHoursReal[m] = r1(u.months[mk]);
+      role.monthlyHoursReal[m] = Math.round((u.months[mk] || 0) * 100) / 100;
     }
   });
 
@@ -3824,7 +3829,7 @@ function renderAnalytics() {
   const comisionValor = comisionBaseValor * (proj.budget.commissionPct / 100);
   const otrosCostos = totalIndirectos + comisionValor;
   const margenPlan = ingresosTotales > 0 ? Math.round(((ingresosTotales - grandPlanCost - otrosCostos) / ingresosTotales) * 1000) / 10 : 0;
-  const margenReal = ingresosTotales > 0 ? Math.round(((ingresosTotales - grandRealCost - otrosCostos) / ingresosTotales) * 1000) / 10 : 0;
+  const margenReal = computeRealFinancials(proj, grandRealCost).rent;
   // Valor ganado (earned value) aproximado: % avance real del cronograma x costo total planeado
   const valorGanado = grandPlanCost * (avanceReal / 100);
   const cpi = grandRealCost > 0 ? Math.round((valorGanado / grandRealCost) * 100) / 100 : (grandRealCost === 0 && grandPlanCost > 0 ? null : 1);
@@ -3854,7 +3859,7 @@ function renderAnalytics() {
     <p class="section-title"><span class="n">💰</span>Presupuesto — indicadores clave</p>
     <div class="cost-summary">
       <div class="cost-box" title="CPI > 1 gastas menos de lo ganado, < 1 gastas de más (como en EVM)"><div class="k">Índice de costo (CPI)</div><div class="v">${cpi === null ? '—' : badge(cpi >= 0.95, cpi.toFixed(2), cpi.toFixed(2))}</div></div>
-      <div class="cost-box"><div class="k">Margen proyectado vs real</div><div class="v">${margenPlan}% <span style="font-size:13px; color:var(--gray);">/ ${margenReal}%</span></div></div>
+      <div class="cost-box"><div class="k">Margen proyectado vs real</div><div class="v">${margenPlan}% <span style="font-size:13px; color:var(--gray);">/ ${margenReal === null ? '—' : margenReal + '%'}</span></div></div>
       <div class="cost-box" title="Costo real promedio por mes transcurrido"><div class="k">Burn rate mensual</div><div class="v" style="font-size:15px;">${fmt(burnRate)}</div></div>
       <div class="cost-box" title="Costo real a hoy + burn rate x meses restantes"><div class="k">Costo final proyectado</div><div class="v" style="font-size:15px; color:${proyeccionCostoFinal <= grandPlanCost ? 'var(--green)' : 'var(--red)'};">${fmt(proyeccionCostoFinal)}</div></div>
       <div class="cost-box"><div class="k">Meses transcurridos</div><div class="v">${mesesTranscurridos} <span style="font-size:13px; color:var(--gray);">/ ${n}</span></div></div>
@@ -4003,7 +4008,8 @@ function openBillingMilestonesModal(milestones, contractValue) {
   const withoutPct = milestones.filter(m => m.pct === null);
   const usedPct = withPct.reduce((s, m) => s + m.pct, 0);
   const remainder = withoutPct.length > 0 ? Math.max(0, (100 - usedPct) / withoutPct.length) : 0;
-  const rows = milestones.map(m => ({ ...m, pct: m.pct !== null ? m.pct : Math.round(remainder * 100) / 100 }));
+  const savedPct = (currentProject().budget.milestonePercents) || {};
+  const rows = milestones.map(m => ({ ...m, pct: Object.prototype.hasOwnProperty.call(savedPct, m.taskId) ? (parseFloat(savedPct[m.taskId]) || 0) : (m.pct !== null ? m.pct : Math.round(remainder * 100) / 100) }));
 
   const modal = document.getElementById('billingMilestonesModal');
   const list = document.getElementById('billingMilestonesList');
@@ -4045,26 +4051,80 @@ function confirmBillingMilestones() {
   renderBudget(); persistAll();
   saveIndicator('Ingresos sincronizados desde hitos');
 }
-function applyMilestoneIngresos(proj) {
-  // Los ingresos siempre salen de los hitos de pago del cronograma: valor del contrato x % de cada hito,
-  // ubicado en el mes en que termina el hito. Si falta el valor del contrato o no hay hitos, no se toca nada.
-  const contractValue = parseFloat(proj.budget.contractValue) || 0;
-  if (contractValue <= 0) return;
-  const detected = detectBillingMilestones(proj);
-  if (detected.length === 0) return;
+/* Filas de hitos de pago. El % que tú guardaste manda sobre el que aparece escrito en el nombre de la tarea
+   (ej. "pago 25%"); si nunca lo cambiaste, se usa el del nombre. "Ejecutado" = la tarea del hito está al 100%. */
+function getMilestoneRows(proj) {
   const saved = proj.budget.milestonePercents || {};
-  const resolved = detected.map(m => ({ m, pct: saved[m.taskId] !== undefined ? parseFloat(saved[m.taskId]) || 0 : (m.pct !== null ? m.pct : null) }));
-  const unresolved = resolved.filter(x => x.pct === null);
-  const used = resolved.reduce((sum, x) => sum + (x.pct || 0), 0);
-  const remainder = unresolved.length ? Math.max(0, (100 - used) / unresolved.length) : 0;
+  const contractValue = parseFloat(proj.budget.contractValue) || 0;
+  return detectBillingMilestones(proj).map(m => {
+    const t = proj.tasks.find(x => x.id === m.taskId);
+    const hasSaved = Object.prototype.hasOwnProperty.call(saved, m.taskId);
+    const pct = hasSaved ? (parseFloat(saved[m.taskId]) || 0) : (m.pct !== null ? m.pct : 0);
+    return { ...m, pct, hasSaved, amount: contractValue * pct / 100, executed: (parseFloat(t && t.completado) || 0) >= 100 };
+  });
+}
+function applyMilestoneIngresos(proj) {
+  if (proj.budget.billingMode !== 'milestones') return;
   const n = proj.budget.duracionMeses;
   const monthlyIngresos = new Array(n).fill(0);
-  resolved.forEach(x => {
-    const pct = x.pct === null ? remainder : x.pct;
-    const idx = monthIndexFromStart(proj.budget.startMonth, x.m.date);
-    if (idx >= 0 && idx < n) monthlyIngresos[idx] += contractValue * pct / 100;
+  getMilestoneRows(proj).forEach(m => {
+    const idx = monthIndexFromStart(proj.budget.startMonth, m.date);
+    if (idx >= 0 && idx < n) monthlyIngresos[idx] += m.amount;
   });
   proj.budget.monthlyIngresos = monthlyIngresos;
+}
+/* Ingreso EJECUTADO: con hitos de pago = suma de los hitos ya cumplidos (al 100%); sin hitos = ingresos de los
+   meses transcurridos. La rentabilidad real se calcula sobre este valor, no sobre el ingreso total del contrato. */
+function computeExecutedIncome(proj) {
+  const n = proj.budget.duracionMeses;
+  const today = new Date();
+  const startIdx = monthKeyToIdx(proj.budget.startMonth || (today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0')));
+  const todayIdx = today.getFullYear() * 12 + today.getMonth();
+  const mesesTransc = Math.max(0, Math.min(n, todayIdx - startIdx + 1));
+  if (proj.budget.billingMode === 'milestones') {
+    const rows = getMilestoneRows(proj); const done = rows.filter(r => r.executed);
+    return { amount: done.reduce((sum, r) => sum + r.amount, 0), mesesTransc, mode: 'milestones', detail: `${done.length} de ${rows.length} hitos de pago cumplidos` };
+  }
+  return { amount: (proj.budget.monthlyIngresos || []).slice(0, mesesTransc).reduce((sum, v) => sum + (parseFloat(v) || 0), 0), mesesTransc, mode: 'months', detail: `${mesesTransc} de ${n} meses transcurridos` };
+}
+function computeRealFinancials(proj, grandRealCost) {
+  const ex = computeExecutedIncome(proj);
+  const ingresosTotales = (proj.budget.monthlyIngresos || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+  const comisionTotal = (proj.budget.commissionBase === 'contrato' ? (parseFloat(proj.budget.contractValue) || 0) : ingresosTotales) * ((parseFloat(proj.budget.commissionPct) || 0) / 100);
+  // La comisión y los indirectos se reconocen en proporción a lo ya ejecutado/transcurrido
+  const comisionReal = ingresosTotales > 0 ? comisionTotal * (ex.amount / ingresosTotales) : 0;
+  const indirectosReal = (proj.budget.indirectCosts || []).reduce((sum, ic) => sum + (ic.monthlyValues || []).slice(0, ex.mesesTransc).reduce((s2, v) => s2 + (parseFloat(v) || 0), 0), 0);
+  const utilidad = ex.amount - grandRealCost - comisionReal - indirectosReal;
+  const rent = ex.amount > 0 ? Math.round((utilidad / ex.amount) * 1000) / 10 : null;
+  return { ingresoEjecutado: ex.amount, detail: ex.detail, comisionReal, indirectosReal, utilidad, rent };
+}
+function renderHitosPagoPanel(proj) {
+  const panel = document.getElementById('hitosPagoPanel'); if (!panel) return;
+  if (proj.budget.billingMode !== 'milestones') { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+  const rows = getMilestoneRows(proj);
+  const fmt = (v) => v.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+  const total = rows.reduce((sum, r) => sum + r.pct, 0);
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <div style="font-weight:700; font-size:13px; margin-bottom:6px;">Hitos de pago <span style="font-weight:400; color:var(--gray); font-size:12px;">· el % se guarda al escribirlo; un hito cuenta como ejecutado cuando su tarea está al 100%</span></div>
+    <table style="width:auto; min-width:560px;"><thead><tr><th style="text-align:left;">Hito</th><th>Fecha</th><th>%</th><th>Monto</th><th>Estado</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td style="font-size:12.5px;">${escapeHtml(r.name)}</td>
+      <td style="font-size:12px; white-space:nowrap;">${r.date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+      <td><input type="number" min="0" max="100" step="0.5" data-hitopct="${r.taskId}" value="${r.pct}" style="width:70px; text-align:right;"></td>
+      <td class="cost-col" style="font-size:12px;">${fmt(r.amount)}</td>
+      <td><span class="badge ${r.executed ? 'badge-ok' : 'badge-phase'}">${r.executed ? 'Ejecutado' : 'Pendiente'}</span></td></tr>`).join('') || '<tr><td colspan="5" style="color:var(--gray); font-size:12px;">No hay tareas de hito de pago en el cronograma.</td></tr>'}
+    </tbody></table>
+    <div style="font-size:12.5px; margin-top:6px; font-weight:700; color:${Math.abs(total - 100) < 0.5 ? 'var(--green)' : 'var(--orange)'};">Total: ${Math.round(total * 100) / 100}%${Math.abs(total - 100) < 0.5 ? '' : ' (debería sumar 100%)'}</div>`;
+  panel.querySelectorAll('input[data-hitopct]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      proj.budget.milestonePercents = proj.budget.milestonePercents || {};
+      // al editar uno, se fijan también los demás con lo que se ve, para que nada vuelva a leerse del nombre
+      getMilestoneRows(proj).forEach(r => { if (!r.hasSaved) proj.budget.milestonePercents[r.taskId] = r.pct; });
+      proj.budget.milestonePercents[inp.dataset.hitopct] = parseFloat(inp.value) || 0;
+      applyMilestoneIngresos(proj);
+      withScrollPreserved(renderBudget); persistAll();
+    });
+  });
 }
 
 /* ============================================================
@@ -4178,11 +4238,16 @@ document.getElementById('btnToggleClaudeChat').addEventListener('click', () => {
 document.getElementById('btnCloseClaudeChat').addEventListener('click', () => { document.getElementById('claudeChatPanel').style.display = 'none'; });
 document.getElementById('btnSendClaudeChat').addEventListener('click', sendClaudeChatMessage);
 document.getElementById('claudeChatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendClaudeChatMessage(); });
-document.getElementById('budgetContractValue').addEventListener('change', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.contractValue = e.target.value; recalc(); renderBudget(); persistAll(); });
-document.getElementById('budgetContractValue').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
-document.getElementById('budgetDuracionMeses').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.duracionMeses = parseInt(e.target.value) || 1; recalc(); renderBudget(); persistAll(); });
-document.getElementById('budgetStartMonth').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.startMonth = e.target.value; recalc(); renderBudget(); persistAll(); });
-['budgetTable', 'indirectosPanel'].forEach(id => document.getElementById(id).addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.target.blur(); }));
+document.getElementById('budgetIngresos').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget._flatIngresoDraft = e.target.value; persistAll(); });
+document.getElementById('btnApplyFlatIngreso').addEventListener('click', () => {
+  const proj = currentProject(); if (!proj) return;
+  const val = parseFloat(document.getElementById('budgetIngresos').value) || 0;
+  proj.budget.monthlyIngresos = new Array(proj.budget.duracionMeses).fill(val);
+  renderBudget(); persistAll();
+});
+document.getElementById('budgetContractValue').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.contractValue = e.target.value; persistAll(); });
+document.getElementById('budgetDuracionMeses').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.duracionMeses = parseInt(e.target.value) || 1; renderBudget(); persistAll(); });
+document.getElementById('budgetStartMonth').addEventListener('input', (e) => { const proj = currentProject(); if (!proj) return; proj.budget.startMonth = e.target.value; renderBudget(); persistAll(); });
 document.getElementById('btnAddBudgetRole').addEventListener('click', () => { const proj = currentProject(); if (!proj) return; proj.budget.roles.push({ name: '', occupancyPct: '', rate: '', monthlyHours: new Array(proj.budget.duracionMeses).fill(0), monthlyHoursReal: new Array(proj.budget.duracionMeses).fill(0) }); renderBudget(); persistAll(); });
 document.getElementById('btnSyncFromSchedule').addEventListener('click', syncBudgetFromSchedule);
 document.getElementById('btnSaveBudgetExplicit').addEventListener('click', async () => {
