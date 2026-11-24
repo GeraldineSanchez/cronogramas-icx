@@ -476,12 +476,14 @@ Fase 2: Migración
     <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; font-size:12.5px; margin-bottom:6px;">
       <label style="display:flex; gap:5px; align-items:center;"><input type="checkbox" id="ghRemember"> Recordar el token en este navegador</label>
       <label style="display:flex; gap:5px; align-items:center;"><input type="checkbox" id="ghNoLower" checked> No bajar el avance (solo subirlo)</label>
+      <button class="btn btn-ghost btn-xs" id="btnGhTest" type="button">🔑 Probar token</button>
       <button class="btn btn-ghost btn-xs" id="btnGhForget" type="button">Olvidar token guardado</button>
     </div>
     <details style="font-size:11.5px; color:var(--gray); margin-bottom:8px; line-height:1.45;"><summary style="cursor:pointer;">¿Cómo creo el token?</summary>
       En GitHub: tu foto → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token. Elige el dueño (tu organización) y "Only select repositories" con tu repo. En Permissions → Repository permissions pon <b>Issues: Read-only</b> (nada más). El token se queda solo en este navegador y solo se envía a api.github.com; no se guarda en el repositorio de la herramienta. Si la organización exige aprobación o SSO, autorízalo ahí.
     </details>
     <div id="ghStatus" style="font-size:12.5px; margin:6px 0; min-height:18px;"></div>
+    <div id="ghDiag" style="display:none; font-size:12.5px; line-height:1.5; background:var(--gray-light); border-radius:8px; padding:10px 12px; margin-bottom:8px;"></div>
     <div id="ghResult" style="max-height:380px; overflow:auto; border:1px solid var(--border); border-radius:8px; display:none;"></div>
     <div id="ghUnmatched" style="font-size:12px; margin-top:8px;"></div>
     <div class="modal-actions">
@@ -4209,14 +4211,51 @@ async function ghFetch(url, token) {
   let res;
   try { res = await fetch(url, { headers: Object.assign({ 'Accept': 'application/vnd.github+json' }, token ? { 'Authorization': 'Bearer ' + token } : {}) }); }
   catch (e) { throw new Error('No se pudo conectar con GitHub. Revisa tu conexión o si la red de la empresa bloquea api.github.com.'); }
-  if (res.status === 401) throw new Error('GitHub rechazó el token (401). Revisa que esté bien copiado y que no haya vencido.');
+  const fail = (msg) => { const er = new Error(msg); er.status = res.status; throw er; };
+  if (res.status === 401) fail('GitHub rechazó el token (401). Revisa que esté bien copiado, completo y que no haya vencido.');
   if (res.status === 403 || res.status === 429) {
     const rem = res.headers.get('x-ratelimit-remaining');
-    throw new Error(rem === '0' ? 'Se alcanzó el límite de consultas de GitHub. Usa un token (permite 5.000 por hora) o espera un rato.' : 'GitHub negó el acceso (403). Si el repositorio es de la organización, el token debe tener acceso a ese repositorio (y estar autorizado por SSO si aplica).');
+    fail(rem === '0' ? 'Se alcanzó el límite de consultas de GitHub. Usa un token (permite 5.000 por hora) o espera un rato.' : 'GitHub negó el acceso (403). El token no tiene el permiso "Issues: Read-only" sobre ese repositorio, o la organización exige autorizarlo (SSO).');
   }
-  if (res.status === 404) throw new Error('No se encontró el repositorio, o el token no tiene acceso a él (404).');
-  if (!res.ok) throw new Error('GitHub respondió con error ' + res.status + '.');
+  if (res.status === 404) fail('No se encontró el repositorio con ese nombre y ese token (404).');
+  if (!res.ok) fail('GitHub respondió con error ' + res.status + '.');
   return res.json();
+}
+async function ghAccessibleRepos(token) {
+  const out = [];
+  for (let page = 1; page <= 3; page++) {
+    const data = await ghFetch(`https://api.github.com/user/repos?per_page=100&sort=pushed&page=${page}`, token);
+    data.forEach(r => out.push(r.full_name));
+    if (data.length < 100) break;
+  }
+  return out;
+}
+function ghSetDiag(html) { const el = document.getElementById('ghDiag'); el.innerHTML = html || ''; el.style.display = html ? 'block' : 'none'; }
+function ghRepoChips(repos) {
+  if (!repos.length) return '<i>ninguno</i>';
+  return repos.slice(0, 60).map(r => `<button type="button" class="btn btn-ghost btn-xs" data-ghrepo="${escapeHtml(r)}" style="margin:2px;">${escapeHtml(r)}</button>`).join('') + (repos.length > 60 ? ` … y ${repos.length - 60} más` : '');
+}
+let ghFailedRepo = '';
+async function ghDiagnose(repo, token) {
+  ghFailedRepo = repo;
+  if (!token) return `No se encontró <b>${escapeHtml(repo)}</b> y no escribiste token. Si es un repositorio <b>privado</b> (lo normal en una organización), GitHub responde "no existe" cuando no hay token: necesitas uno. Si es público, revisa que el nombre esté bien escrito.`;
+  let me;
+  try { me = await ghFetch('https://api.github.com/user', token); }
+  catch (e) { return e.status === 401 ? 'GitHub <b>rechazó el token</b>: está incompleto, mal copiado (revisa que no tenga espacios ni saltos de línea) o venció. Genera uno nuevo y pégalo completo.' : escapeHtml(e.message); }
+  let repos = []; try { repos = await ghAccessibleRepos(token); } catch (e) {}
+  return `El token es <b>válido</b> (usuario <b>@${escapeHtml(me.login)}</b>), pero con él GitHub no encuentra <b>${escapeHtml(repo)}</b>. Causas típicas: <br>① el nombre está mal escrito; <br>② al crear el token, en <i>Resource owner</i> elegiste tu usuario y no la <b>organización</b>; <br>③ no marcaste este repositorio en <i>Only select repositories</i>; <br>④ la organización exige aprobar el token.<br><div style="margin-top:6px;"><b>Repositorios a los que este token SÍ tiene acceso (${repos.length}):</b> haz clic en uno para usarlo<br>${ghRepoChips(repos)}</div>`;
+}
+async function ghTestToken() {
+  const token = document.getElementById('ghToken').value.trim();
+  ghSetDiag(''); 
+  if (!token) { ghSetStatus('Pega el token primero (o déjalo vacío si el repositorio es público).', true); return; }
+  ghSetStatus('Probando el token…');
+  try {
+    const me = await ghFetch('https://api.github.com/user', token);
+    let repos = []; try { repos = await ghAccessibleRepos(token); } catch (e) {}
+    ghSetStatus(`✅ Token válido: usuario @${me.login}.`);
+    ghSetDiag(`<b>Repositorios a los que este token tiene acceso (${repos.length}):</b> haz clic en uno para usarlo<br>${ghRepoChips(repos)}${repos.length === 0 ? '<div style="margin-top:6px; color:var(--red);">El token es válido pero no llega a ningún repositorio: al crearlo elige la <b>organización</b> como Resource owner y marca tu repositorio en "Only select repositories".</div>' : ''}`);
+  } catch (e) { ghSetStatus(e.message, true); }
 }
 async function ghFetchIssues(repo, token, onProgress) {
   const all = [];
@@ -4335,7 +4374,14 @@ function ghRenderPreview() {
 }
 async function ghSearch() {
   const proj = currentProject(); if (!proj) return;
-  const repos = ghParseRepos(document.getElementById('ghRepos').value);
+  const rawRepos = document.getElementById('ghRepos').value;
+  ghSetDiag('');
+  if (/github\.com\/(?:orgs|users)\/[^\s/]+\/projects\/\d+|\/projects\/\d+/i.test(rawRepos) || /(^|[\s,;])(orgs|users)\//i.test(rawRepos)) {
+    ghSetStatus('Eso parece la dirección de un tablero (Project), no de un repositorio.', true);
+    ghSetDiag('Necesito el <b>repositorio donde viven los issues</b>, con la forma <b>dueño/nombre</b>. Para encontrarlo: abre cualquier tarjeta del tablero → arriba verás algo como <i>mi-organizacion/mi-repo #514</i>. Si los issues están en varios repositorios, escríbelos todos separados por coma. También puedes pulsar <b>🔑 Probar token</b> para ver la lista de repositorios a los que tu token llega.');
+    return;
+  }
+  const repos = ghParseRepos(rawRepos);
   if (!repos.length) { ghSetStatus('Escribe el repositorio como dueño/nombre, por ejemplo mi-organizacion/mi-repo.', true); return; }
   const token = document.getElementById('ghToken').value.trim();
   proj.github = { repos: repos.join(', ') };
@@ -4346,7 +4392,10 @@ async function ghSearch() {
   try {
     ghSetStatus('Consultando GitHub…');
     let issues = [];
-    for (const repo of repos) issues = issues.concat(await ghFetchIssues(repo, token, ghSetStatus));
+    for (const repo of repos) {
+      try { issues = issues.concat(await ghFetchIssues(repo, token, ghSetStatus)); }
+      catch (e) { e.repo = repo; throw e; }
+    }
     recalc();
     const { rows, unmatchedIssues } = ghMatchTasks(proj, issues);
     const needComments = Array.from(new Set(rows.filter(r => r.issue && r.issue.state !== 'closed' && r.issue.comments > 0).map(r => r.issue)));
@@ -4367,7 +4416,10 @@ async function ghSearch() {
     document.getElementById('ghUnmatched').innerHTML = unmatchedIssues.length
       ? `<details><summary style="cursor:pointer; color:var(--gray);">${unmatchedIssues.length} issue(s) de GitHub sin tarea en este cronograma</summary><div style="max-height:140px; overflow:auto; margin-top:4px;">${unmatchedIssues.slice(0, 80).map(i => `<div>#${i.number} ${escapeHtml(String(i.title).slice(0, 90))} <span style="color:var(--gray);">(${i.state === 'closed' ? 'cerrado' : 'abierto'})</span></div>`).join('')}</div><div style="color:var(--gray); margin-top:4px;">Si una tarea no se emparejó, ábrela con ✎ y escribe el número en "Issue de GitHub".</div></details>`
       : '';
-  } catch (e) { ghSetStatus(e.message || String(e), true); }
+  } catch (e) {
+    ghSetStatus(e.message || String(e), true);
+    if (e.status === 404 && e.repo) { ghSetStatus('No se encontró «' + e.repo + '» (404).', true); ghSetDiag('Revisando tu token…'); ghSetDiag(await ghDiagnose(e.repo, token)); }
+  }
   finally { btn.disabled = false; }
 }
 function ghApply() {
@@ -4391,12 +4443,19 @@ function openGhModal() {
   document.getElementById('ghRepos').value = (proj.github && proj.github.repos) || '';
   let saved = ''; try { saved = localStorage.getItem(GH_TOKEN_KEY) || ''; } catch (e) {}
   document.getElementById('ghToken').value = saved; document.getElementById('ghRemember').checked = !!saved;
-  ghPreview = []; ghRenderPreview(); ghSetStatus(''); document.getElementById('ghUnmatched').innerHTML = '';
+  ghPreview = []; ghRenderPreview(); ghSetStatus(''); ghSetDiag(''); document.getElementById('ghUnmatched').innerHTML = '';
   document.getElementById('ghModal').classList.add('open');
 }
 document.getElementById('btnGithubProgress').addEventListener('click', openGhModal);
 document.getElementById('btnGhClose').addEventListener('click', () => { document.getElementById('ghModal').classList.remove('open'); if (!document.getElementById('ghRemember').checked) document.getElementById('ghToken').value = ''; });
 document.getElementById('btnGhSearch').addEventListener('click', ghSearch);
+document.getElementById('btnGhTest').addEventListener('click', ghTestToken);
+document.getElementById('ghDiag').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-ghrepo]'); if (!b) return;
+  const inp = document.getElementById('ghRepos'); const cur = ghParseRepos(inp.value).filter(x => !/^(orgs|users)\//i.test(x) && x.toLowerCase() !== String(ghFailedRepo).toLowerCase());
+  if (!cur.some(x => x.toLowerCase() === b.dataset.ghrepo.toLowerCase())) cur.push(b.dataset.ghrepo);
+  inp.value = cur.join(', '); ghFailedRepo = ''; ghSetDiag(''); ghSetStatus('Listo: ' + b.dataset.ghrepo + '. Pulsa «Buscar en GitHub».');
+});
 document.getElementById('btnGhApply').addEventListener('click', ghApply);
 document.getElementById('ghNoLower').addEventListener('change', () => { if (ghPreview.length) ghRenderPreview(); });
 document.getElementById('btnGhForget').addEventListener('click', () => { try { localStorage.removeItem(GH_TOKEN_KEY); } catch (e) {} document.getElementById('ghToken').value = ''; document.getElementById('ghRemember').checked = false; ghSetStatus('Token olvidado de este navegador.'); });
