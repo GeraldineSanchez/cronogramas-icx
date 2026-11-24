@@ -55,13 +55,19 @@
   .wbs-tag{font-size:10.5px; color:var(--gray); width:34px; flex-shrink:0;}
   #taskRowMenu .indent-btn{width:100%; height:auto; padding:6px 8px; justify-content:flex-start; gap:6px; font-size:12.5px; border-radius:6px;}
   #taskRowMenu .indent-btn:hover{background:var(--gray-light);}
-  #tasksTableWrap table{table-layout:fixed; width:100%;}
+  #tasksTableWrap table{table-layout:fixed; width:100%; min-width:900px;}
+  #tasksTableWrap td{vertical-align:middle;}
+  #tasksTableWrap td .badge{max-width:100%; overflow:hidden; text-overflow:ellipsis; padding:2px 7px;}
+  #tasksTableWrap td:last-child{text-align:center; padding-left:0; padding-right:0;}
+  #tasksTableWrap input[type="date"]::-webkit-calendar-picker-indicator{margin-left:1px; padding:0;}
   .task-name-ta{flex:1 1 auto; min-width:0; width:100%; resize:none; overflow:hidden; border:1px solid var(--border); border-radius:6px; padding:4px 6px; font-family:inherit; font-size:12px; line-height:1.3; white-space:normal; word-break:break-word; background:#fff;}
   .task-name-ta:focus{outline:none; border-color:var(--orange);}
   #tasksTableWrap input[type="date"]{padding:2px 2px; min-width:0;}
   #tasksTableWrap th, #tasksTableWrap td{padding:4px 3px; font-size:11.5px; overflow-wrap:anywhere;}
   #tasksTableWrap th{white-space:normal; line-height:1.2; word-break:normal; overflow-wrap:normal;}
-  .res-picker{width:100%; text-align:left; white-space:normal; word-break:break-word; font-size:11px; padding:4px 6px; border:1px solid var(--border); border-radius:6px; background:#fff; cursor:pointer; min-height:26px; line-height:1.25; font-family:inherit; color:var(--text, inherit);}
+  .res-picker{width:100%; text-align:left; white-space:normal; word-break:break-word; font-size:11px; padding:4px 6px; border:1px solid var(--border); border-radius:6px; background:#fff; cursor:pointer; min-height:26px; line-height:1.25; font-family:inherit; color:var(--text, inherit); display:flex; align-items:flex-start; gap:4px;}
+  .res-picker .res-names{flex:1; min-width:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .res-picker .res-multi{flex:none;}
   .res-picker:hover{border-color:var(--orange);}
   .res-picker .res-multi{display:inline-block; background:var(--orange-light); color:var(--orange); font-weight:700; border-radius:8px; padding:0 5px; margin-right:4px; font-size:10px;}
   #resPickerPanel label{display:flex; align-items:center; gap:7px; padding:4px 6px; font-size:12.5px; border-radius:6px; cursor:pointer;}
@@ -189,6 +195,7 @@
           <button class="btn btn-primary" id="btnExportTasksExcel" style="text-align:left; width:100%;">📊 Exportar cronograma a Excel</button>
           <button class="btn btn-ghost" id="btnImportMspdi" style="text-align:left; width:100%;">📥 Importar desde MS Project (.xml)</button>
           <button class="btn btn-ghost" id="btnImportExcelSchedule" style="text-align:left; width:100%;">📥 Importar cronograma desde Excel</button>
+          <button class="btn btn-ghost" id="btnGithubProgress" style="text-align:left; width:100%;">🐙 Actualizar avance desde GitHub</button>
           <button class="btn btn-ghost" id="btnExportJson" style="text-align:left; width:100%;">💾 Exportar JSON</button>
           <button class="btn btn-ghost" id="btnImportJson" style="text-align:left; width:100%;">📤 Importar JSON</button>
         </div>
@@ -272,22 +279,22 @@ Fase 2: Migración
       <button class="btn btn-ghost" id="btnExpandAllPhases" title="Ver todas las fases con sus tareas">▼ Ver todo</button>
       <span class="save-indicator" id="filterCount"></span>
     </div>
-    <div id="tasksTableWrap" style="overflow-x:hidden;">
+    <div id="tasksTableWrap" style="overflow-x:auto;">
     <table>
       <thead>
         <tr>
-          <th style="width:30px;" title="Número de fila, como el ID de Project">N°</th>
+          <th style="width:28px;" title="Número de fila, como el ID de Project">N°</th>
           <th>Tarea</th>
           <th style="width:36px;">Días</th>
-          <th style="width:74px;">% Avance real</th>
-          <th style="width:78px;">% Avance esperado</th>
-          <th style="width:84px;">Desviación</th>
-          <th style="width:120px;">Responsable</th>
-          <th style="width:84px;" title="Ej: 2  |  2FS+3  |  2SS-1  |  2FF">Predec.</th>
-          <th style="width:108px;">Inicio</th>
-          <th style="width:108px;">Fin</th>
-          <th style="width:60px;">Estado</th>
-          <th style="width:20px;"></th>
+          <th style="width:70px;">% Avance real</th>
+          <th style="width:72px;">% Avance esperado</th>
+          <th style="width:80px;">Desviación</th>
+          <th style="width:116px;">Responsable</th>
+          <th style="width:78px;" title="Ej: 2  |  2FS+3  |  2SS-1  |  2FF">Predec.</th>
+          <th style="width:104px;">Inicio</th>
+          <th style="width:104px;">Fin</th>
+          <th style="width:90px;">Estado</th>
+          <th style="width:30px;"></th>
         </tr>
       </thead>
       <tbody id="taskBody"></tbody>
@@ -348,7 +355,7 @@ Fase 2: Migración
     </div>
     <div id="hitosPagoPanel" style="display:none; margin:0 0 14px 0; background:var(--gray-light); border-radius:8px; padding:12px; overflow-x:auto;"></div>
     <p class="hint" style="margin-top:0;">
-      "Sincronizar ingresos" busca tareas cuyo nombre tenga un hito de pago (ej. "Migración Ventas (hito de pago 25%)") y usa la fecha en que terminan según el cronograma para ubicar ese ingreso en el mes correcto — solo necesitas darle el valor total del contrato.
+      "Sincronizar ingresos" busca tareas cuyo nombre tenga la palabra "hito" (ej. "Migración Ventas (hito de pago 25%)") y usa la fecha en que terminan según el cronograma para ubicar ese ingreso en el mes correcto — solo necesitas darle el valor total del contrato.
       "Sincronizar horas planeadas" trae las horas asignadas de cada recurso directamente de las tareas del cronograma. "Sincronizar horas reales" las calcula como horas planeadas × % de avance real de cada tarea.
       Haz clic en ▶ junto a cada recurso para ver/editar su desglose mes a mes sin saturar la tabla.
     </p>
@@ -454,6 +461,33 @@ Fase 2: Migración
     <div class="modal-actions">
       <button class="btn btn-ghost" id="btnCancelBillingMs">Cancelar</button>
       <button class="btn btn-accent" id="btnConfirmBillingMs">Aplicar a los ingresos</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="ghModal">
+  <div class="modal-box" style="width:min(1000px, 96vw);">
+    <h2>🐙 Actualizar avance desde GitHub</h2>
+    <p class="hint2">Lee los issues de tu repositorio, los empareja con las tareas del cronograma y te muestra una <b>vista previa</b>: no cambia nada hasta que pulses "Aplicar". El avance se toma de, en este orden: issue cerrado (100%) → porcentaje escrito en un comentario (ej. "Avance 60%") → casillas del issue (- [x]) → etiquetas (in progress, review, done…).</p>
+    <div class="toolbar" style="margin:0 0 8px 0;">
+      <div class="field" style="flex:1; min-width:260px;"><label>Repositorio(s) — owner/repo, separados por coma</label><input type="text" id="ghRepos" placeholder="mi-organizacion/mi-repo" style="width:100%;"></div>
+      <div class="field" style="flex:1; min-width:260px;"><label>Token de GitHub (solo lectura de Issues)</label><input type="password" id="ghToken" autocomplete="off" placeholder="github_pat_…  (vacío si el repo es público)" style="width:100%;"></div>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; font-size:12.5px; margin-bottom:6px;">
+      <label style="display:flex; gap:5px; align-items:center;"><input type="checkbox" id="ghRemember"> Recordar el token en este navegador</label>
+      <label style="display:flex; gap:5px; align-items:center;"><input type="checkbox" id="ghNoLower" checked> No bajar el avance (solo subirlo)</label>
+      <button class="btn btn-ghost btn-xs" id="btnGhForget" type="button">Olvidar token guardado</button>
+    </div>
+    <details style="font-size:11.5px; color:var(--gray); margin-bottom:8px; line-height:1.45;"><summary style="cursor:pointer;">¿Cómo creo el token?</summary>
+      En GitHub: tu foto → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token. Elige el dueño (tu organización) y "Only select repositories" con tu repo. En Permissions → Repository permissions pon <b>Issues: Read-only</b> (nada más). El token se queda solo en este navegador y solo se envía a api.github.com; no se guarda en el repositorio de la herramienta. Si la organización exige aprobación o SSO, autorízalo ahí.
+    </details>
+    <div id="ghStatus" style="font-size:12.5px; margin:6px 0; min-height:18px;"></div>
+    <div id="ghResult" style="max-height:380px; overflow:auto; border:1px solid var(--border); border-radius:8px; display:none;"></div>
+    <div id="ghUnmatched" style="font-size:12px; margin-top:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnGhClose" type="button">Cerrar</button>
+      <button class="btn btn-primary" id="btnGhSearch" type="button">🔎 Buscar en GitHub</button>
+      <button class="btn btn-accent" id="btnGhApply" type="button" style="display:none;">Aplicar seleccionados</button>
     </div>
   </div>
 </div>
@@ -822,7 +856,7 @@ function normalizeTask(t) {
     id: t.id || taskUid(), name: t.name || '', parentId: t.parentId || null,
     duration: t.duration ?? '', allocation: t.allocation ?? 100, resource: t.resource || '',
     predText: t.predText || '', completado: t.completado ?? 0, isMilestone: !!t.isMilestone,
-    manualStart: t.manualStart || '', manualStartDateTime: t.manualStartDateTime || '', manualEndDateTime: t.manualEndDateTime || '', notas: t.notas || ''
+    manualStart: t.manualStart || '', manualStartDateTime: t.manualStartDateTime || '', manualEndDateTime: t.manualEndDateTime || '', notas: t.notas || '', ghIssue: t.ghIssue || ''
   };
 }
 function defaultProject(name) {
@@ -1479,6 +1513,7 @@ function buildTaskEditPanel(proj, t, r, isPhase, resourceNames) {
     fieldsHtml += field('Asignación (%)', `<input type="number" min="1" max="100" data-efield="allocation" value="${t.allocation ?? 100}" style="${bigInputStyle}">`);
     fieldsHtml += field('Días-persona (0 = hito)', `<input type="number" min="0" step="0.5" data-efield="duration" value="${t.duration ?? ''}" style="${bigInputStyle}">`);
     fieldsHtml += field('Predecesoras (número de fila)', `<input type="text" data-efield="predText" value="${escapeHtml(t.predText||'')}" placeholder="ej. 2FS+3" style="${bigInputStyle}">`);
+    fieldsHtml += field('Issue de GitHub (opcional)', `<input type="text" data-efield="ghIssue" value="${escapeHtml(t.ghIssue||'')}" placeholder="ej. #514, owner/repo#514 o la URL" title="Si lo llenas, el avance se toma siempre de ese issue" style="${bigInputStyle}">`);
     fieldsHtml += field('% Avance real', `<input type="number" min="0" max="100" data-efield="completado" value="${t.completado ?? 0}" style="${bigInputStyle}">`);
     fieldsHtml += field('Fecha inicio manual (vacío = automática)', `<input type="date" data-efield="manualStart" value="${t.manualStart||''}" style="${bigInputStyle}">`);
     fieldsHtml += field('Fecha fin manual (vacío = automática)', `<input type="date" data-efield="manualEnd" value="${t.manualEndDateTime ? t.manualEndDateTime.slice(0,10) : ''}" style="${bigInputStyle}">`);
@@ -1594,7 +1629,7 @@ let selectedTaskId = null;
 function resButtonLabel(t, isPhase) {
   const names = taskResourceNames(t);
   if (names.length === 0) return `<span style="color:var(--gray);">${isPhase ? '— Sin dueño —' : '— Sin asignar —'}</span>`;
-  return (names.length > 1 ? `<span class="res-multi">×${names.length}</span>` : '') + names.map(escapeHtml).join(', ');
+  return (names.length > 1 ? `<span class="res-multi">×${names.length}</span>` : '') + `<span class="res-names">${names.map(escapeHtml).join(', ')}</span>`;
 }
 let resPickerTaskId = null;
 function setTaskResources(proj, t, names) {
@@ -1804,7 +1839,7 @@ function renderTaskTable() {
         const sign = desv > 0 ? '+' : '';
         return `<span class="badge" style="color:${color}; background:${bg}; font-weight:700;">${sign}${desv}%</span>`;
       })()}</td>
-      <td><button type="button" class="res-picker" data-resbtn="${t.id}" title="Clic para elegir una o varias personas">${resButtonLabel(t, isPhase)}</button></td>
+      <td><button type="button" class="res-picker" data-resbtn="${t.id}" title="${escapeHtml(taskResourceNames(t).join(', ') || 'Clic para elegir una o varias personas')}">${resButtonLabel(t, isPhase)}</button></td>
       <td>${isPhase ? '' : `<input type="text" data-field="predText" value="${escapeHtml(t.predText || '')}" placeholder="ej. 2FS+3" style="font-size:12px;">`}</td>
       <td style="min-width:130px;">${isPhase ? `<span style="font-size:12px; white-space:nowrap;">${r ? r.start.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</span>` : `
         <input type="date" data-field="manualStart" value="${t.manualStart || (r ? r.start.toISOString().slice(0,10) : '')}" style="font-size:11px; padding:3px; width:100%;" title="Esta fecha se calcula sola; cámbiala si quieres fijarla manualmente">
@@ -3977,13 +4012,15 @@ document.getElementById('viewTabAnalytics').addEventListener('click', () => setV
 /* ============================================================
    SINCRONIZAR INGRESOS DESDE HITOS DE PAGO DEL CRONOGRAMA
    ============================================================ */
-function detectBillingMilestones(proj) {
+function detectBillingMilestones(proj, includeExcluded) {
   const milestones = [];
+  const excluded = proj.budget.milestoneExcluded || {};
   proj.tasks.forEach(t => {
     if (hasChildrenGlobal[t.id]) return;
     const r = scheduleResults[t.id]; if (!r) return;
     const name = t.name || '';
-    if (!/hito|pago/i.test(name)) return;
+    if (!/\bhitos?\b/i.test(name)) return;   // solo tareas que digan "hito" (ya no se mezclan las que dicen "pago")
+    if (!includeExcluded && excluded[t.id]) return;
     const m = name.match(/(\d+(?:\.\d+)?)\s*%/);
     milestones.push({ taskId: t.id, name, pct: m ? parseFloat(m[1]) : null, date: r.end });
   });
@@ -4000,16 +4037,16 @@ function syncIngresosFromMilestones() {
   if (contractValue <= 0) { alert('Primero ingresa el "Valor total del contrato" para poder calcular el monto de cada hito.'); return; }
   recalc();
   const milestones = detectBillingMilestones(proj);
-  if (milestones.length === 0) { alert('No se encontraron tareas de hito de pago en el cronograma. Deben tener la palabra "hito" o "pago" en el nombre, ej. "Hito 2: Pago-Diseño Mes 1".'); return; }
+  if (milestones.length === 0) { alert('No se encontraron tareas de hito en el cronograma. Deben tener la palabra "hito" en el nombre, ej. "Hito 2: Pago-Diseño Mes 1 (25%)". Si quitaste hitos antes, restáuralos desde el panel "Hitos de pago".'); return; }
   openBillingMilestonesModal(milestones, contractValue);
 }
-function openBillingMilestonesModal(milestones, contractValue) {
+function openBillingMilestonesModal(milestones, contractValue, overrides) {
   const withPct = milestones.filter(m => m.pct !== null);
   const withoutPct = milestones.filter(m => m.pct === null);
   const usedPct = withPct.reduce((s, m) => s + m.pct, 0);
   const remainder = withoutPct.length > 0 ? Math.max(0, (100 - usedPct) / withoutPct.length) : 0;
   const savedPct = (currentProject().budget.milestonePercents) || {};
-  const rows = milestones.map(m => ({ ...m, pct: Object.prototype.hasOwnProperty.call(savedPct, m.taskId) ? (parseFloat(savedPct[m.taskId]) || 0) : (m.pct !== null ? m.pct : Math.round(remainder * 100) / 100) }));
+  const rows = milestones.map(m => ({ ...m, pct: (overrides && Object.prototype.hasOwnProperty.call(overrides, m.taskId)) ? overrides[m.taskId] : (Object.prototype.hasOwnProperty.call(savedPct, m.taskId) ? (parseFloat(savedPct[m.taskId]) || 0) : (m.pct !== null ? m.pct : Math.round(remainder * 100) / 100)) }));
 
   const modal = document.getElementById('billingMilestonesModal');
   const list = document.getElementById('billingMilestonesList');
@@ -4020,10 +4057,20 @@ function openBillingMilestonesModal(milestones, contractValue) {
         <div style="font-size:11.5px; color:var(--gray);">${m.date.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'})}${m.pct === null ? ' · sin % detectado en el nombre, ajústalo aquí' : ''}</div>
       </div>
       <input type="number" min="0" max="100" step="0.5" data-msidx="${idx}" value="${m.pct}" style="width:70px; text-align:right;"> <span style="color:var(--gray);">%</span>
+      <button type="button" class="btn btn-ghost btn-xs" data-msdel="${idx}" title="Quitar este hito de la lista de pagos">🗑</button>
     </div>`).join('');
   list.dataset.rows = JSON.stringify(rows.map(m => ({ taskId: m.taskId, date: m.date.toISOString() })));
   updateBillingMilestonesTotal();
   list.querySelectorAll('input').forEach(inp => inp.addEventListener('input', updateBillingMilestonesTotal));
+  list.querySelectorAll('[data-msdel]').forEach(btn => btn.addEventListener('click', () => {
+    const proj = currentProject(); if (!proj) return;
+    const meta = JSON.parse(list.dataset.rows || '[]');
+    const keep = {}; Array.from(list.querySelectorAll('input')).forEach((inp, i) => { keep[meta[i].taskId] = parseFloat(inp.value) || 0; });
+    const id = meta[parseInt(btn.dataset.msdel)].taskId;
+    proj.budget.milestoneExcluded = proj.budget.milestoneExcluded || {}; proj.budget.milestoneExcluded[id] = true; delete keep[id];
+    persistAll();
+    openBillingMilestonesModal(detectBillingMilestones(proj), contractValue, keep);
+  }));
   modal.dataset.contractValue = contractValue;
   modal.classList.add('open');
 }
@@ -4053,6 +4100,16 @@ function confirmBillingMilestones() {
 }
 /* Filas de hitos de pago. El % que tú guardaste manda sobre el que aparece escrito en el nombre de la tarea
    (ej. "pago 25%"); si nunca lo cambiaste, se usa el del nombre. "Ejecutado" = la tarea del hito está al 100%. */
+function removeMilestone(proj, taskId) {
+  proj.budget.milestoneExcluded = proj.budget.milestoneExcluded || {};
+  proj.budget.milestoneExcluded[taskId] = true;
+  if (proj.budget.milestonePercents) delete proj.budget.milestonePercents[taskId];
+  applyMilestoneIngresos(proj);
+}
+function restoreRemovedMilestones(proj) {
+  proj.budget.milestoneExcluded = {};
+  applyMilestoneIngresos(proj);
+}
 function getMilestoneRows(proj) {
   const saved = proj.budget.milestonePercents || {};
   const contractValue = parseFloat(proj.budget.contractValue) || 0;
@@ -4104,17 +4161,25 @@ function renderHitosPagoPanel(proj) {
   const rows = getMilestoneRows(proj);
   const fmt = (v) => v.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
   const total = rows.reduce((sum, r) => sum + r.pct, 0);
+  const removedCount = Object.keys(proj.budget.milestoneExcluded || {}).filter(id => detectBillingMilestones(proj, true).some(m => m.taskId === id)).length;
   panel.style.display = 'block';
   panel.innerHTML = `
     <div style="font-weight:700; font-size:13px; margin-bottom:6px;">Hitos de pago <span style="font-weight:400; color:var(--gray); font-size:12px;">· el % se guarda al escribirlo; un hito cuenta como ejecutado cuando su tarea está al 100%</span></div>
-    <table style="width:auto; min-width:560px;"><thead><tr><th style="text-align:left;">Hito</th><th>Fecha</th><th>%</th><th>Monto</th><th>Estado</th></tr></thead><tbody>
+    <table style="width:auto; min-width:580px;"><thead><tr><th style="text-align:left;">Hito</th><th>Fecha</th><th>%</th><th>Monto</th><th>Estado</th><th></th></tr></thead><tbody>
     ${rows.map(r => `<tr><td style="font-size:12.5px;">${escapeHtml(r.name)}</td>
       <td style="font-size:12px; white-space:nowrap;">${r.date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
       <td><input type="number" min="0" max="100" step="0.5" data-hitopct="${r.taskId}" value="${r.pct}" style="width:70px; text-align:right;"></td>
       <td class="cost-col" style="font-size:12px;">${fmt(r.amount)}</td>
-      <td><span class="badge ${r.executed ? 'badge-ok' : 'badge-phase'}">${r.executed ? 'Ejecutado' : 'Pendiente'}</span></td></tr>`).join('') || '<tr><td colspan="5" style="color:var(--gray); font-size:12px;">No hay tareas de hito de pago en el cronograma.</td></tr>'}
+      <td><span class="badge ${r.executed ? 'badge-ok' : 'badge-phase'}">${r.executed ? 'Ejecutado' : 'Pendiente'}</span></td>
+      <td><button type="button" class="btn btn-ghost btn-xs" data-hitodel="${r.taskId}" title="Quitar este hito de la lista de pagos (no borra la tarea del cronograma)">🗑 Quitar</button></td></tr>`).join('') || '<tr><td colspan="6" style="color:var(--gray); font-size:12px;">No hay tareas con la palabra "hito" en el cronograma.</td></tr>'}
     </tbody></table>
-    <div style="font-size:12.5px; margin-top:6px; font-weight:700; color:${Math.abs(total - 100) < 0.5 ? 'var(--green)' : 'var(--orange)'};">Total: ${Math.round(total * 100) / 100}%${Math.abs(total - 100) < 0.5 ? '' : ' (debería sumar 100%)'}</div>`;
+    <div style="font-size:12.5px; margin-top:6px; font-weight:700; color:${Math.abs(total - 100) < 0.5 ? 'var(--green)' : 'var(--orange)'};">Total: ${Math.round(total * 100) / 100}%${Math.abs(total - 100) < 0.5 ? '' : ' (debería sumar 100%)'}</div>
+    ${removedCount > 0 ? `<button type="button" class="btn btn-ghost btn-xs" id="btnRestoreHitos" style="margin-top:6px;">↺ Restaurar ${removedCount} hito(s) quitado(s)</button>` : ''}`;
+  panel.querySelectorAll('[data-hitodel]').forEach(btn => {
+    btn.addEventListener('click', () => { removeMilestone(proj, btn.dataset.hitodel); withScrollPreserved(renderBudget); persistAll(); });
+  });
+  const restoreBtn = panel.querySelector('#btnRestoreHitos');
+  if (restoreBtn) restoreBtn.addEventListener('click', () => { restoreRemovedMilestones(proj); withScrollPreserved(renderBudget); persistAll(); });
   panel.querySelectorAll('input[data-hitopct]').forEach(inp => {
     inp.addEventListener('input', () => {
       proj.budget.milestonePercents = proj.budget.milestonePercents || {};
@@ -4126,6 +4191,215 @@ function renderHitosPagoPanel(proj) {
     });
   });
 }
+
+/* ============================================================
+   GITHUB → AVANCE DE LAS TAREAS
+   ============================================================ */
+const GH_TOKEN_KEY = 'cronogramas2:ghToken';
+let ghPreview = [];
+function ghParseRepos(text) {
+  const out = [];
+  String(text || '').split(/[\s,;]+/).map(x => x.trim()).filter(Boolean).forEach(x => {
+    const r = x.replace(/^https?:\/\/github\.com\//i, '').replace(/\.git$/i, '').replace(/\/+$/, '').split('/').slice(0, 2).join('/');
+    if (/^[\w.-]+\/[\w.-]+$/.test(r) && !out.some(o => o.toLowerCase() === r.toLowerCase())) out.push(r);
+  });
+  return out;
+}
+async function ghFetch(url, token) {
+  let res;
+  try { res = await fetch(url, { headers: Object.assign({ 'Accept': 'application/vnd.github+json' }, token ? { 'Authorization': 'Bearer ' + token } : {}) }); }
+  catch (e) { throw new Error('No se pudo conectar con GitHub. Revisa tu conexión o si la red de la empresa bloquea api.github.com.'); }
+  if (res.status === 401) throw new Error('GitHub rechazó el token (401). Revisa que esté bien copiado y que no haya vencido.');
+  if (res.status === 403 || res.status === 429) {
+    const rem = res.headers.get('x-ratelimit-remaining');
+    throw new Error(rem === '0' ? 'Se alcanzó el límite de consultas de GitHub. Usa un token (permite 5.000 por hora) o espera un rato.' : 'GitHub negó el acceso (403). Si el repositorio es de la organización, el token debe tener acceso a ese repositorio (y estar autorizado por SSO si aplica).');
+  }
+  if (res.status === 404) throw new Error('No se encontró el repositorio, o el token no tiene acceso a él (404).');
+  if (!res.ok) throw new Error('GitHub respondió con error ' + res.status + '.');
+  return res.json();
+}
+async function ghFetchIssues(repo, token, onProgress) {
+  const all = [];
+  for (let page = 1; page <= 10; page++) {
+    const data = await ghFetch(`https://api.github.com/repos/${repo}/issues?state=all&per_page=100&sort=updated&page=${page}`, token);
+    data.forEach(i => { if (!i.pull_request) all.push(Object.assign({}, i, { _repo: repo })); });
+    if (onProgress) onProgress(`${repo}: ${all.length} issues leídos…`);
+    if (data.length < 100) break;
+  }
+  return all;
+}
+async function ghFetchComments(issue, token) {
+  if (!issue.comments) return [];
+  const page = Math.max(1, Math.ceil(issue.comments / 100)); // última página = comentarios más recientes
+  const data = await ghFetch(`https://api.github.com/repos/${issue._repo}/issues/${issue.number}/comments?per_page=100&page=${page}`, token);
+  return data.map(c => ({ body: c.body || '', created: c.created_at || '' }));
+}
+function ghIssueIdFromTitle(title) { const m = String(title || '').match(/^\W*#?(\d{4,7})\b/); return m ? m[1] : null; }
+function ghNormText(x) { return normNameKey(x).replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim(); }
+function ghTitleCore(title) { return ghNormText(String(title || '').replace(/^\W*#?\d{4,7}\b[\s:.\-–—]*/, '').replace(/\s*#\d+\s*$/, '')); }
+function ghTokens(x) { return new Set(ghNormText(x).split(' ').filter(w => w.length > 2)); }
+function ghJaccard(a, b) { if (!a.size || !b.size) return 0; let inter = 0; a.forEach(w => { if (b.has(w)) inter++; }); return inter / (a.size + b.size - inter); }
+function ghParseLink(txt) {
+  const t = String(txt || '').trim(); if (!t) return null;
+  let m = t.match(/github\.com\/([\w.-]+\/[\w.-]+)\/issues\/(\d+)/i); if (m) return { repo: m[1], number: +m[2] };
+  m = t.match(/^([\w.-]+\/[\w.-]+)#(\d+)$/); if (m) return { repo: m[1], number: +m[2] };
+  m = t.match(/^#?(\d+)$/); if (m) return { repo: null, number: +m[1] };
+  return null;
+}
+function ghMatchTasks(proj, issues) {
+  const leaves = proj.tasks.filter(t => !hasChildrenGlobal[t.id]);
+  const rows = []; const used = new Set();
+  leaves.forEach(t => {
+    let issue = null, how = '';
+    const link = ghParseLink(t.ghIssue);
+    if (link) {
+      issue = issues.find(i => i.number === link.number && (!link.repo || i._repo.toLowerCase() === link.repo.toLowerCase()));
+      if (!issue) { rows.push({ task: t, missing: String(t.ghIssue) }); return; }
+      how = 'vínculo manual';
+    }
+    if (!issue) {
+      const nm = t.name || '';
+      const hit = issues.find(i => { const id = ghIssueIdFromTitle(i.title); return id && new RegExp('(^|\\D)' + id + '(\\D|$)').test(nm); });
+      if (hit) { issue = hit; how = 'número de HU en el nombre'; }
+    }
+    if (!issue) {
+      const core = ghNormText(t.name); const toks = ghTokens(t.name);
+      let best = null, bestScore = 0;
+      issues.forEach(i => {
+        const ic = ghTitleCore(i.title); if (!ic || !core) return;
+        let score;
+        if (ic === core) score = 1;
+        else if (Math.min(ic.length, core.length) >= 12 && (ic.includes(core) || core.includes(ic))) score = 0.92;
+        else score = ghJaccard(toks, ghTokens(ic));
+        if (score > bestScore) { best = i; bestScore = score; }
+      });
+      if (best && bestScore >= 0.75) { issue = best; how = 'título parecido (' + Math.round(bestScore * 100) + '%)'; }
+    }
+    if (issue) { used.add(issue); rows.push({ task: t, issue, how }); }
+  });
+  return { rows, unmatchedIssues: issues.filter(i => !used.has(i)) };
+}
+function ghProgress(issue, comments) {
+  if (issue.state === 'closed') {
+    if (issue.state_reason === 'not_planned') return { pct: null, source: 'cerrado como "no planificado"', conf: 'baja' };
+    return { pct: 100, source: 'issue cerrado', conf: 'alta' };
+  }
+  const sorted = (comments || []).slice().sort((a, b) => String(b.created).localeCompare(String(a.created)));
+  const clamp = (v) => Math.max(0, Math.min(100, Math.round(v)));
+  const num = (x) => parseFloat(String(x).replace(',', '.'));
+  const fmt = (d) => d ? new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }) : '';
+  const reStrong = /(?:avance|progreso|progress|completad[oa]|cumplimiento|ejecutad[oa])[^\d%]{0,25}?(\d{1,3}(?:[.,]\d+)?)\s*%/i;
+  const reOnly = /^\s*(\d{1,3}(?:[.,]\d+)?)\s*%\s*\.?\s*$/;
+  const reLoose = /\b(?:va|vamos|llevamos|llevo|est[aá]|queda|qued[oó])\s+(?:al|en)\s+(\d{1,3}(?:[.,]\d+)?)\s*%/i;
+  for (const c of sorted) {
+    let m = c.body.match(reStrong) || c.body.match(reOnly);
+    if (m) return { pct: clamp(num(m[1])), source: `comentario del ${fmt(c.created)}: "${m[0].trim().slice(0, 45)}"`, conf: 'alta' };
+    m = c.body.match(reLoose);
+    if (m) return { pct: clamp(num(m[1])), source: `comentario del ${fmt(c.created)}: "${m[0].trim().slice(0, 45)}"`, conf: 'media' };
+  }
+  const body = issue.body || '';
+  const done = (body.match(/^\s*[-*+]\s+\[[xX]\]/gm) || []).length, open = (body.match(/^\s*[-*+]\s+\[ \]/gm) || []).length;
+  if (done + open > 0) return { pct: Math.round(done / (done + open) * 100), source: `casillas del issue: ${done} de ${done + open}`, conf: 'alta' };
+  const labels = (issue.labels || []).map(l => (typeof l === 'string' ? l : l.name) || '').filter(Boolean);
+  const rules = [[/done|hecho|terminad|finalizad|completad|resuelt/i, 100], [/review|revisi[oó]n|\bqa\b|testing|pruebas?|uat|validaci[oó]n/i, 80], [/in progress|en progreso|en curso|doing|desarrollo|\bwip\b/i, 50], [/todo|backlog|por hacer|pendiente|\bready\b/i, 0]];
+  for (const [re, v] of rules) {
+    const hit = labels.filter(l => re.test(l));
+    if (hit.length) return { pct: v, source: 'etiqueta: ' + hit.join(', '), conf: 'media' };
+  }
+  if (sorted[0] && /\b(terminad[oa]|finalizad[oa]|completad[oa]|entregad[oa]|desplegad[oa])\b/i.test(sorted[0].body)) return { pct: 100, source: 'el último comentario dice "terminado/entregado"', conf: 'baja' };
+  return { pct: null, source: 'sin información (abierto, sin % en comentarios, casillas ni etiquetas)', conf: 'baja' };
+}
+function ghSetStatus(msg, isError) { const el = document.getElementById('ghStatus'); el.textContent = msg || ''; el.style.color = isError ? 'var(--red)' : 'var(--charcoal)'; }
+function ghRowDefaultChecked(row, noLower) {
+  if (row.newPct === null || row.newPct === row.cur || row.conf === 'baja') return false;
+  return !(noLower && row.newPct < row.cur);
+}
+function ghRenderPreview() {
+  const box = document.getElementById('ghResult'); const noLower = document.getElementById('ghNoLower').checked;
+  if (!ghPreview.length) { box.style.display = 'none'; document.getElementById('btnGhApply').style.display = 'none'; return; }
+  box.style.display = 'block'; document.getElementById('btnGhApply').style.display = '';
+  const confTag = { alta: '', media: ' <span style="color:var(--orange);" title="Confianza media: revísalo">●</span>', baja: ' <span style="color:var(--gray);" title="Confianza baja">○</span>' };
+  box.innerHTML = `<table style="width:100%; font-size:12.5px;"><thead><tr><th style="width:28px;"><input type="checkbox" id="ghChkAll" title="Marcar/desmarcar todo"></th><th style="text-align:left;">Tarea</th><th style="text-align:left;">Issue</th><th style="text-align:left;">Cómo se calculó</th><th>Actual</th><th>Nuevo</th></tr></thead><tbody>` +
+    ghPreview.map((r, i) => {
+      if (r.missing) return `<tr><td></td><td>${escapeHtml(r.task.name)}</td><td colspan="4" style="color:var(--red);">No se encontró el issue "${escapeHtml(r.missing)}" que tiene vinculado</td></tr>`;
+      const checked = ghRowDefaultChecked(r, noLower);
+      return `<tr><td><input type="checkbox" data-ghchk="${i}" ${checked ? 'checked' : ''} ${r.newPct === null ? 'disabled' : ''}></td>
+        <td>${escapeHtml(r.task.name)}</td>
+        <td><a href="${escapeHtml(r.issue.html_url || '#')}" target="_blank" rel="noopener">#${r.issue.number}</a> <span style="color:var(--gray);">${escapeHtml(String(r.issue.title).length > 48 ? String(r.issue.title).slice(0, 48) + '…' : String(r.issue.title))}</span><div style="font-size:11px; color:var(--gray);">${escapeHtml(r.how)} · ${r.issue.state === 'closed' ? 'cerrado' : 'abierto'}</div></td>
+        <td style="font-size:12px;">${escapeHtml(r.source)}${confTag[r.conf] || ''}</td>
+        <td style="text-align:center;">${r.cur}%</td>
+        <td style="text-align:center;"><input type="number" min="0" max="100" data-ghpct="${i}" value="${r.newPct === null ? '' : r.newPct}" placeholder="—" ${r.newPct === null ? 'disabled' : ''} style="width:64px; text-align:right;"></td></tr>`;
+    }).join('') + '</tbody></table>';
+  const all = box.querySelector('#ghChkAll');
+  all.addEventListener('change', () => box.querySelectorAll('input[data-ghchk]:not(:disabled)').forEach(c => { c.checked = all.checked; }));
+}
+async function ghSearch() {
+  const proj = currentProject(); if (!proj) return;
+  const repos = ghParseRepos(document.getElementById('ghRepos').value);
+  if (!repos.length) { ghSetStatus('Escribe el repositorio como dueño/nombre, por ejemplo mi-organizacion/mi-repo.', true); return; }
+  const token = document.getElementById('ghToken').value.trim();
+  proj.github = { repos: repos.join(', ') };
+  try { if (token && document.getElementById('ghRemember').checked) localStorage.setItem(GH_TOKEN_KEY, token); } catch (e) {}
+  persistAll();
+  const btn = document.getElementById('btnGhSearch'); btn.disabled = true;
+  ghPreview = []; ghRenderPreview(); document.getElementById('ghUnmatched').innerHTML = '';
+  try {
+    ghSetStatus('Consultando GitHub…');
+    let issues = [];
+    for (const repo of repos) issues = issues.concat(await ghFetchIssues(repo, token, ghSetStatus));
+    recalc();
+    const { rows, unmatchedIssues } = ghMatchTasks(proj, issues);
+    const needComments = Array.from(new Set(rows.filter(r => r.issue && r.issue.state !== 'closed' && r.issue.comments > 0).map(r => r.issue)));
+    const commentsById = new Map();
+    for (let i = 0; i < needComments.length; i += 5) {
+      ghSetStatus(`Leyendo comentarios (${Math.min(i + 5, needComments.length)} de ${needComments.length})…`);
+      await Promise.all(needComments.slice(i, i + 5).map(async iss => { commentsById.set(iss.id, await ghFetchComments(iss, token)); }));
+    }
+    ghPreview = rows.map(r => {
+      if (r.missing) return r;
+      const prog = ghProgress(r.issue, commentsById.get(r.issue.id) || []);
+      return { task: r.task, issue: r.issue, how: r.how, cur: parseFloat(r.task.completado) || 0, newPct: prog.pct, source: prog.source, conf: prog.conf };
+    });
+    ghRenderPreview();
+    const ok = ghPreview.filter(r => !r.missing);
+    const sug = ok.filter(r => ghRowDefaultChecked(r, document.getElementById('ghNoLower').checked)).length;
+    ghSetStatus(`${issues.length} issues leídos · ${ok.length} tareas emparejadas · ${sug} con cambio sugerido (ya marcadas).`);
+    document.getElementById('ghUnmatched').innerHTML = unmatchedIssues.length
+      ? `<details><summary style="cursor:pointer; color:var(--gray);">${unmatchedIssues.length} issue(s) de GitHub sin tarea en este cronograma</summary><div style="max-height:140px; overflow:auto; margin-top:4px;">${unmatchedIssues.slice(0, 80).map(i => `<div>#${i.number} ${escapeHtml(String(i.title).slice(0, 90))} <span style="color:var(--gray);">(${i.state === 'closed' ? 'cerrado' : 'abierto'})</span></div>`).join('')}</div><div style="color:var(--gray); margin-top:4px;">Si una tarea no se emparejó, ábrela con ✎ y escribe el número en "Issue de GitHub".</div></details>`
+      : '';
+  } catch (e) { ghSetStatus(e.message || String(e), true); }
+  finally { btn.disabled = false; }
+}
+function ghApply() {
+  const proj = currentProject(); if (!proj) return;
+  let n = 0;
+  document.querySelectorAll('#ghResult input[data-ghchk]:checked').forEach(chk => {
+    const idx = parseInt(chk.dataset.ghchk); const row = ghPreview[idx]; if (!row || row.missing) return;
+    const inp = document.querySelector('#ghResult input[data-ghpct="' + idx + '"]');
+    const v = parseFloat(inp && inp.value); if (isNaN(v)) return;
+    row.task.completado = Math.max(0, Math.min(100, Math.round(v)));
+    if (!row.task.ghIssue) row.task.ghIssue = row.issue._repo + '#' + row.issue.number; // la próxima vez se empareja directo
+    n++;
+  });
+  document.getElementById('ghModal').classList.remove('open');
+  if (!document.getElementById('ghRemember').checked) document.getElementById('ghToken').value = '';
+  recalc(); renderAll_inner(); persistAll();
+  saveIndicator(n ? `Avance actualizado en ${n} tarea(s) desde GitHub` : 'No se marcó ninguna tarea para actualizar');
+}
+function openGhModal() {
+  const proj = currentProject(); if (!proj) return;
+  document.getElementById('ghRepos').value = (proj.github && proj.github.repos) || '';
+  let saved = ''; try { saved = localStorage.getItem(GH_TOKEN_KEY) || ''; } catch (e) {}
+  document.getElementById('ghToken').value = saved; document.getElementById('ghRemember').checked = !!saved;
+  ghPreview = []; ghRenderPreview(); ghSetStatus(''); document.getElementById('ghUnmatched').innerHTML = '';
+  document.getElementById('ghModal').classList.add('open');
+}
+document.getElementById('btnGithubProgress').addEventListener('click', openGhModal);
+document.getElementById('btnGhClose').addEventListener('click', () => { document.getElementById('ghModal').classList.remove('open'); if (!document.getElementById('ghRemember').checked) document.getElementById('ghToken').value = ''; });
+document.getElementById('btnGhSearch').addEventListener('click', ghSearch);
+document.getElementById('btnGhApply').addEventListener('click', ghApply);
+document.getElementById('ghNoLower').addEventListener('change', () => { if (ghPreview.length) ghRenderPreview(); });
+document.getElementById('btnGhForget').addEventListener('click', () => { try { localStorage.removeItem(GH_TOKEN_KEY); } catch (e) {} document.getElementById('ghToken').value = ''; document.getElementById('ghRemember').checked = false; ghSetStatus('Token olvidado de este navegador.'); });
 
 /* ============================================================
    CHAT CON CLAUDE EMBEBIDO
